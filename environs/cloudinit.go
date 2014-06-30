@@ -28,7 +28,7 @@ import (
 // DataDir is the default data directory.
 // Tests can override this where needed, so they don't need to mess with global
 // system state.
-var DataDir = agent.DefaultDataDir
+var DataDir = paths.DefaultDataDir
 
 // logDir returns a filesystem path to the location where applications
 // may create a folder containing logs
@@ -47,7 +47,7 @@ func NewMachineConfig(
 	mcfg := &cloudinit.MachineConfig{
 		// Fixed entries.
 		DataDir:                 DataDir,
-		LogDir:                  agent.DefaultLogDir,
+		LogDir:                  paths.DefaultLogDir,
 		Jobs:                    []params.MachineJob{params.JobHostUnits},
 		CloudInitOutputLog:      CloudInitOutputLog,
 		MachineAgentServiceName: "jujud-" + names.NewMachineTag(machineID).String(),

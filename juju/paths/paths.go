@@ -2,6 +2,8 @@ package paths
 
 import (
 	"fmt"
+	"path/filepath"
+
 
 	"github.com/juju/juju/version"
 )
@@ -28,6 +30,26 @@ var winVals = map[osVarType]string{
 	dataDir: "C:/Juju/lib/juju",
 	jujuRun: "C:/Juju/bin/juju-run",
 }
+
+// Work Around these values panicking on windows when running juju.exe
+// This is OAOO solution and should be fixed ASAP.
+
+// logDir returns a filesystem path to the location where juju
+// may create a folder containing its logs
+var osLogDir = MustSucceed(LogDir(version.Current.Series))
+
+// dataDir returns the default data directory for this running system
+//var dataDir = paths.MustSucceed(DataDir(version.Current.Series))
+
+// DefaultLogDir defines the default log directory for juju agents.
+// It's defined as a variable so it could be overridden in tests.
+var DefaultLogDir = filepath.Join(osLogDir, "juju")
+
+// DefaultDataDir defines the default data directory for juju agents.
+// It's defined as a variable so it could be overridden in tests.
+var DefaultDataDir = MustSucceed(DataDir(version.Current.Series))
+
+// XXX (perrito666) End of hack
 
 // osVal will lookup the value of the key valname
 // in the apropriate map, based on the series. This will
