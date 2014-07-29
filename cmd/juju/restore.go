@@ -5,8 +5,7 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/juju/cmd"
@@ -19,11 +18,13 @@ import (
 	"github.com/juju/juju/constraints"
 	"github.com/juju/juju/juju"
 	"github.com/juju/juju/provider/common"
+	"github.com/juju/juju/state/api"
 	"github.com/juju/juju/state/api/params"
+	"github.com/juju/juju/utils/ssh"
 )
 
 type restoreClient interface {
-	Restore(io.Reader) error
+	Restore(string) error
 }
 
 type RestoreCommand struct {
@@ -68,14 +69,15 @@ func (c *RestoreCommand) SetFlags(f *gnuflag.FlagSet) {
 func (c *RestoreCommand) Init(args []string) error {
 	for _, arg := range args {
 		switch {
-		case arg == "-u":
-			c.Upload = true
-		case arg == "-b":
-			c.Bootstrap = true
-		case c.Filename == "":
-			c.Filename = arg
-		default:
-			return fmt.Errorf("unrecognized argument: %v", arg)
+			case arg == "-u":
+				c.Upload = true
+			case arg == "-b":
+				c.Bootstrap = true
+			case c.Filename == "":
+				c.Filename = arg
+			default:
+				return fmt.Errorf("unrecognized argument: %v", arg)
+		}
 	}
 	if c.Filename == "" {
 		return fmt.Errorf("no backup name specified")
@@ -87,12 +89,9 @@ const restoreAPIIncompatibility = "server version not compatible for " +
 	"restore with client version"
 
 func (c *RestoreCommand) runRestore(ctx *cmd.Context, client restoreClient) error {
-	fd, err := os.Open(c.Filename)
-	if err != nil {
-		return err
-	}
-	defer fd.Close()
+
 	fileName := filepath.Base(c.Filename)
+	
 	if err := client.Restore(fileName); err != nil {
 		if params.IsCodeNotImplemented(err) {
 			return fmt.Errorf(restoreAPIIncompatibility)
@@ -160,7 +159,20 @@ func (c *RestoreCommand) rebootstrap (ctx *cmd.Context) (environs.Environ, error
 	return env, nil
 }
 
-func (c *RestoreCommand) doUpload(client *juju.Client) error {	
+func (c *RestoreCommand) doUpload(client *api.Client) error {	
+
+	addr, err := client.PublicAddress("0")
+	if err != nil {
+		return err
+	}
+
+	fileName := filepath.Base(c.Filename)
+	
+	if err := ssh.Copy([]string{c.Filename, fmt.Sprintf("ubuntu@%s:%s", addr, fileName)}, nil); err != nil {
+		return err
+	}
+	//TODO(perrito666) add to envstorage, is it worthy? or will I need to remove afer?
+	// Also make sure to have ensurebackups
 	return nil
 }
 
