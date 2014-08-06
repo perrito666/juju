@@ -94,7 +94,7 @@ func registerCommands(r commandRegistry, ctx *cmd.Context) {
 	r.Register(wrapEnvCommand(&DeployCommand{}))
 	r.Register(wrapEnvCommand(&AddRelationCommand{}))
 	r.Register(wrapEnvCommand(&AddUnitCommand{}))
-	
+
 	// Backup and Restore commands.
 	r.Register(wrapEnvCommand(&RestoreCommand{}))
 

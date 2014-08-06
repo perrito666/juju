@@ -45,7 +45,7 @@ var allowedMethodsDuringUpgrades = set.NewStrings(
 	"Client.PrivateAddress", // for "juju ssh"
 	"Client.PublicAddress",  // for "juju ssh"
 	"Client.WatchDebugLog",  // for "juju debug-log"
-	"Client.Restore",	// for "juju restore"
+	"Client.Restore",        // for "juju restore"
 )
 
 func isMethodAllowedDuringUpgrade(rootName, methodName string) bool {

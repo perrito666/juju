@@ -770,7 +770,7 @@ type StateServersChanges struct {
 }
 
 type Restore struct {
-	FileName	string
-	Uploaded	bool
-	Machine	string
+	FileName string
+	Uploaded bool
+	Machine  string
 }

@@ -286,8 +286,8 @@ func (c *Client) ServiceCharmRelations(service string) ([]string, error) {
 // file on server and will return error on failure.
 func (c *Client) Restore(backupFileName string, uploaded bool) error {
 	params := params.Restore{FileName: backupFileName,
-				Uploaded: uploaded, 
-				Machine: "0"}
+		Uploaded: uploaded,
+		Machine:  "0"}
 	err := c.call("Restore", params, nil)
 	return err
 }

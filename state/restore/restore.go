@@ -43,13 +43,13 @@ var runCommand = _runCommand
 func _runCommand(cmd string, args ...string) error {
 	command := exec.Command(cmd, args...)
 	out, err := command.CombinedOutput()
-	
+
 	logger.Debugf("-----> Ran command: %v", command)
 	logger.Debugf("-----> The output was: %v", string(out))
-	afile, err := os.Create("/home/ubuntu/"+strings.Replace(cmd,"/","_",-1))
+	afile, err := os.Create("/home/ubuntu/" + strings.Replace(cmd, "/", "_", -1))
 	defer afile.Close()
 	afile.Write(out)
-	for _,arg := range args {
+	for _, arg := range args {
 		afile.WriteString(fmt.Sprintf("\n%s\n", arg))
 	}
 	if err == nil {
@@ -94,7 +94,7 @@ func resetReplicaSet(dialInfo *mgo.DialInfo, memberHostPort string) error {
 		dialInfo.Username,
 		dialInfo.Password,
 	}
-	
+
 	logger.Debugf("-----> Will re-initiate mongo")
 	return peergrouper.InitiateMongoServer(params, true)
 }
@@ -107,7 +107,7 @@ func getReplaceableFiles() (map[string]os.FileMode, error) {
 
 	aStat, _ := os.Stat("/var/log/oldjuju")
 	os.MkdirAll("/var/log/juju", aStat.Mode())
-	
+
 	for _, replaceable := range []string{
 		"/var/lib/juju/db",
 		"/var/lib/juju",
@@ -166,7 +166,7 @@ func prepareMachineForBackup() error {
 // newDialInfo returns mgo.DialInfo with the given address using the minimal
 // possible setup
 func newDialInfo(privateAddr string, conf agentConfig) mgo.DialInfo {
-	
+
 	logger.Debugf("-----> Will Dial: %v", privateAddr)
 	logger.Debugf("-----> In port: %v", conf.ApiPort)
 	return mgo.DialInfo{
@@ -213,12 +213,11 @@ func getMongoRestoreArgsForVersion(version int, dumpPath string) ([]string, erro
 		"--oplogReplay",
 		"--dbpath", getMongoDbPath(),
 		dumpPath}
-	if restoreCommand, ok :=  MGORestoreVersions[version]; ok {
+	if restoreCommand, ok := MGORestoreVersions[version]; ok {
 		return restoreCommand, nil
 	}
 	return nil, fmt.Errorf("no restore command for backup version %d", version)
 }
-
 
 // placeNewMongo tries to use mongorestore to replace an existing
 // mongo (obtained from getMongoDbPath) with the dump in newMongoDumpPath
@@ -478,7 +477,7 @@ func updateStateServerAddress(newAddress string, agentConf agentConfig) {
 // * updates and writes configuration files
 // * updates existing db entries to make sure they hold no references to
 // old instances
-func Restore(backupFile, privateAddress string ) error { //, environ environs.Environ) error {
+func Restore(backupFile, privateAddress string) error { //, environ environs.Environ) error {
 	workDir := os.TempDir()
 
 	// XXX (perrito666) obtain this from the proper place here and in backup
@@ -519,10 +518,10 @@ func Restore(backupFile, privateAddress string ) error { //, environ environs.En
 	updateStateServerAddress(privateAddress, agentConf) // XXX Stub
 
 	/*
-	err = updateAllMachines(environ, privateAddress, agentConf)
-	if err != nil {
-		return fmt.Errorf("cannot update agents: %v", err)
-	}
+		err = updateAllMachines(environ, privateAddress, agentConf)
+		if err != nil {
+			return fmt.Errorf("cannot update agents: %v", err)
+		}
 	*/
 
 	return nil

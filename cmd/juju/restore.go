@@ -12,17 +12,16 @@ import (
 	"launchpad.net/gnuflag"
 
 	"github.com/juju/juju/cmd/envcmd"
+	"github.com/juju/juju/constraints"
 	"github.com/juju/juju/environs"
 	"github.com/juju/juju/environs/bootstrap"
 	"github.com/juju/juju/environs/configstore"
-	"github.com/juju/juju/constraints"
 	"github.com/juju/juju/juju"
 	"github.com/juju/juju/provider/common"
 	"github.com/juju/juju/state/api"
 	"github.com/juju/juju/state/api/params"
 	"github.com/juju/juju/utils/ssh"
 )
-
 
 type restoreClient interface {
 	Restore(string, bool) error
@@ -32,8 +31,8 @@ type RestoreCommand struct {
 	envcmd.EnvCommandBase
 	Constraints constraints.Value
 	Filename    string
-	Upload	bool
-	Bootstrap bool
+	Upload      bool
+	Bootstrap   bool
 }
 
 var restoreDoc = `
@@ -74,7 +73,7 @@ func (c *RestoreCommand) Init(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("no backup name specified")
 	}
-	c.Filename = args[0]	
+	c.Filename = args[0]
 	return nil
 }
 
@@ -84,20 +83,20 @@ const restoreAPIIncompatibility = "server version not compatible for " +
 func (c *RestoreCommand) runRestore(ctx *cmd.Context, client restoreClient) error {
 
 	fileName := filepath.Base(c.Filename)
-	
+
 	if err := client.Restore(fileName, c.Upload); err != nil {
-	
+
 		logger.Debugf("------------> Called Restore")
 		if params.IsCodeNotImplemented(err) {
 			return fmt.Errorf(restoreAPIIncompatibility)
-		} 
+		}
 		return err
 	}
 	fmt.Fprintf(ctx.Stdout, "restore from %s completed\n", c.Filename)
 	return nil
 }
 
-func (c *RestoreCommand) rebootstrap (ctx *cmd.Context) (environs.Environ, error) {
+func (c *RestoreCommand) rebootstrap(ctx *cmd.Context) (environs.Environ, error) {
 	cons := c.Constraints
 	store, err := configstore.Default()
 	if err != nil {
@@ -154,15 +153,15 @@ func (c *RestoreCommand) rebootstrap (ctx *cmd.Context) (environs.Environ, error
 	return env, nil
 }
 
-func (c *RestoreCommand) doUpload(client *api.Client) error {	
-	// The 
+func (c *RestoreCommand) doUpload(client *api.Client) error {
+	// The
 	addr, err := client.PublicAddress("0")
 	if err != nil {
 		return err
 	}
 
 	fileName := filepath.Base(c.Filename)
-	
+
 	if err := ssh.Copy([]string{c.Filename, fmt.Sprintf("ubuntu@%s:%s", addr, fileName)}, nil); err != nil {
 		return err
 	}
@@ -178,14 +177,14 @@ func (c *RestoreCommand) Run(ctx *cmd.Context) error {
 			return err
 		}
 	}
-	
+
 	logger.Debugf("------------> bootstrapped")
 	// Empty string will get a client for current default
 	client, err := juju.NewAPIClientFromName("")
 	if err != nil {
 		return err
 	}
-	
+
 	logger.Debugf("------------> have a client")
 	defer client.Close()
 
@@ -196,4 +195,3 @@ func (c *RestoreCommand) Run(ctx *cmd.Context) error {
 
 	return c.runRestore(ctx, client)
 }
-
