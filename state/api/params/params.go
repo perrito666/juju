@@ -768,3 +768,9 @@ type StateServersChanges struct {
 	Promoted   []string `json:promoted,omitempty`
 	Demoted    []string `json:demoted,omitempty`
 }
+
+type Restore struct {
+	FileName	string
+	Uploaded	bool
+	Machine	string
+}

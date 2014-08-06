@@ -20,10 +20,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/juju/loggo"
 	"github.com/juju/names"
 	"github.com/juju/utils"
 	"github.com/juju/utils/tar"
-	"labix.org/v2/mgo"
+	"gopkg.in/mgo.v2"
 	"launchpad.net/goyaml"
 
 	"github.com/juju/juju/environmentserver/authentication"
@@ -35,11 +36,22 @@ import (
 	"github.com/juju/juju/worker/peergrouper"
 )
 
+var logger = loggo.GetLogger("juju.state.restore")
+
 var runCommand = _runCommand
 
 func _runCommand(cmd string, args ...string) error {
 	command := exec.Command(cmd, args...)
 	out, err := command.CombinedOutput()
+	
+	logger.Debugf("-----> Ran command: %v", command)
+	logger.Debugf("-----> The output was: %v", string(out))
+	afile, err := os.Create("/home/ubuntu/"+strings.Replace(cmd,"/","_",-1))
+	defer afile.Close()
+	afile.Write(out)
+	for _,arg := range args {
+		afile.WriteString(fmt.Sprintf("\n%s\n", arg))
+	}
 	if err == nil {
 		return nil
 	}
@@ -62,22 +74,28 @@ func untarFiles(tarFile string, outputFolder string, compress bool) error {
 			return fmt.Errorf("cannot uncompress tar file %q: %v", tarFile, err)
 		}
 	}
-	return tar.UntarFiles(r, outputFolder)
-}
 
-func updateStateServersRecords() error {
-	return nil
+	logger.Debugf("-----> Will untar files")
+	return tar.UntarFiles(r, outputFolder)
 }
 
 // resetReplicaSet re-initiates replica-set using the new state server
 // values, this is required after a mongo restore.
 // in case of failure returns error
 func resetReplicaSet(dialInfo *mgo.DialInfo, memberHostPort string) error {
+	afile, _ := os.Create("/home/ubuntu/dialinfo")
+	defer afile.Close()
+	afile.WriteString(fmt.Sprintf("\n%s\n", dialInfo.Addrs))
+	afile.WriteString(fmt.Sprintf("\n%s\n", dialInfo.Username))
+	afile.WriteString(fmt.Sprintf("\n%s\n", dialInfo.Password))
+
 	params := peergrouper.InitiateMongoParams{dialInfo,
 		memberHostPort,
-		"",
-		"",
+		dialInfo.Username,
+		dialInfo.Password,
 	}
+	
+	logger.Debugf("-----> Will re-initiate mongo")
 	return peergrouper.InitiateMongoServer(params, true)
 }
 
@@ -85,6 +103,11 @@ var replaceableFiles = getReplaceableFiles
 
 func getReplaceableFiles() (map[string]os.FileMode, error) {
 	replaceables := map[string]os.FileMode{}
+	os.Rename("/var/log/juju", "/var/log/oldjuju")
+
+	aStat, _ := os.Stat("/var/log/oldjuju")
+	os.MkdirAll("/var/log/juju", aStat.Mode())
+	
 	for _, replaceable := range []string{
 		"/var/lib/juju/db",
 		"/var/lib/juju",
@@ -143,8 +166,12 @@ func prepareMachineForBackup() error {
 // newDialInfo returns mgo.DialInfo with the given address using the minimal
 // possible setup
 func newDialInfo(privateAddr string, conf agentConfig) mgo.DialInfo {
+	
+	logger.Debugf("-----> Will Dial: %v", privateAddr)
+	logger.Debugf("-----> In port: %v", conf.ApiPort)
 	return mgo.DialInfo{
-		Addrs:    []string{fmt.Sprintf("%s:%s", privateAddr, conf.ApiPort)},
+		//Addrs:    []string{fmt.Sprintf("%s:%s", privateAddr, conf.StatePort)},
+		Addrs:    []string{fmt.Sprintf("localhost:%s", conf.StatePort)},
 		Timeout:  30 * time.Second,
 		Username: conf.Credentials.AdminUsername,
 		Password: conf.Credentials.AdminPassword,
@@ -173,23 +200,58 @@ func _getMongoDbPath() string {
 	return "/var/lib/juju/db"
 }
 
+func getMongoRestoreArgsForVersion(version int, dumpPath string) ([]string, error) {
+	MGORestoreVersions := map[int][]string{}
+
+	MGORestoreVersions[0] = []string{
+		"--drop",
+		"--dbpath", getMongoDbPath(),
+		dumpPath}
+
+	MGORestoreVersions[1] = []string{
+		"--drop",
+		"--oplogReplay",
+		"--dbpath", getMongoDbPath(),
+		dumpPath}
+	if restoreCommand, ok :=  MGORestoreVersions[version]; ok {
+		return restoreCommand, nil
+	}
+	return nil, fmt.Errorf("no restore command for backup version %d", version)
+}
+
+
 // placeNewMongo tries to use mongorestore to replace an existing
 // mongo (obtained from getMongoDbPath) with the dump in newMongoDumpPath
 // returns an error if its not possible
 func placeNewMongo(newMongoDumpPath string) error {
+	logger.Debugf("-----> Will place new mongo")
 	mongoRestore, err := getMongorestorePath()
 	if err != nil {
 		return fmt.Errorf("mongorestore not available: %v", err)
 	}
-	err = runCommand(
-		mongoRestore,
-		"--drop",
-		"--oplogReplay",
-		"--dbpath", getMongoDbPath(),
-		newMongoDumpPath)
+	// TODO(perrito666): When there is a new backup version add mechanism to determine it
+	mgoRestoreArgs, err := getMongoRestoreArgsForVersion(0, newMongoDumpPath)
+	if err != nil {
+		return fmt.Errorf("cannot restore this backup version")
+	}
+	if err = _runCommand(
+		"initctl",
+		"stop",
+		"juju-db"); err != nil {
+		return fmt.Errorf("failed to stop mongo: %v", err)
+	}
+
+	err = _runCommand(mongoRestore, mgoRestoreArgs...)
 
 	if err != nil {
 		return fmt.Errorf("failed to restore database dump: %v", err)
+	}
+
+	if err = _runCommand(
+		"initctl",
+		"start",
+		"juju-db"); err != nil {
+		return fmt.Errorf("failed to start mongo: %v", err)
 	}
 
 	return nil
@@ -416,9 +478,9 @@ func updateStateServerAddress(newAddress string, agentConf agentConfig) {
 // * updates and writes configuration files
 // * updates existing db entries to make sure they hold no references to
 // old instances
-func Restore(backupFile, privateAddress string, environ environs.Environ) error {
+func Restore(backupFile, privateAddress string ) error { //, environ environs.Environ) error {
 	workDir := os.TempDir()
-	defer os.RemoveAll(workDir)
+
 	// XXX (perrito666) obtain this from the proper place here and in backup
 	const agentFile string = "var/lib/juju/agents/machine-0/agent.conf"
 
@@ -430,13 +492,15 @@ func Restore(backupFile, privateAddress string, environ environs.Environ) error 
 		return fmt.Errorf("cannot delete existing files: %v", err)
 	}
 	backupFilesPath := filepath.Join(workDir, "juju-backup")
+
+	defer os.RemoveAll(backupFilesPath)
 	// Extract inner container
 	innerBackup := filepath.Join(backupFilesPath, "root.tar")
 	if err := untarFiles(innerBackup, filesystemRoot(), false); err != nil {
 		return fmt.Errorf("cannot obtain system files from backup: %v", err)
 	}
 	// Restore backed up mongo
-	mongoDump := filepath.Join(backupFilesPath, "juju-backup", "dump")
+	mongoDump := filepath.Join(backupFilesPath, "dump")
 	if err := placeNewMongo(mongoDump); err != nil {
 		return fmt.Errorf("error restoring state from backup: %v", err)
 	}
@@ -448,13 +512,18 @@ func Restore(backupFile, privateAddress string, environ environs.Environ) error 
 	// Re-start replicaset with the new value for server address
 	dialInfo := newDialInfo(privateAddress, agentConf)
 	memberHostPort := fmt.Sprintf("%s:%s", privateAddress, agentConf.ApiPort)
-	resetReplicaSet(&dialInfo, memberHostPort)
+	err = resetReplicaSet(&dialInfo, memberHostPort)
+	if err != nil {
+		return fmt.Errorf("cannot reset replicaSet: %v", err)
+	}
 	updateStateServerAddress(privateAddress, agentConf) // XXX Stub
 
+	/*
 	err = updateAllMachines(environ, privateAddress, agentConf)
 	if err != nil {
 		return fmt.Errorf("cannot update agents: %v", err)
 	}
+	*/
 
 	return nil
 }
