@@ -284,8 +284,12 @@ func (c *Client) ServiceCharmRelations(service string) ([]string, error) {
 // Restore is responsable for finishing a restore after a placeholder
 // machine has been bootstraped, it receives the name of a backup
 // file on server and will return error on failure.
-func (c *Client) Restore(backupFileName string) error {
-	return nil
+func (c *Client) Restore(backupFileName string, uploaded bool) error {
+	params := params.Restore{FileName: backupFileName,
+				Uploaded: uploaded, 
+				Machine: "0"}
+	err := c.call("Restore", params, nil)
+	return err
 }
 
 // AddMachines1dot18 adds new machines with the supplied parameters.
