@@ -622,7 +622,7 @@ func (a *MachineAgent) StateWorker() (worker.Worker, error) {
 					Key:       key,
 					DataDir:   dataDir,
 					LogDir:    logDir,
-					Validator: a.limitLoginsDuringUpgrade,
+					Validator: a.limitLogins,
 				})
 			})
 			a.startWorkerAfterUpgrade(singularRunner, "cleaner", func() (worker.Worker, error) {
@@ -672,7 +672,7 @@ func init() {
 	}
 }
 
-// limitLogin is called by the API server for each login attempt.
+// limitLogins is called by the API server for each login attempt.
 // it returns an error if upgrads or restore are running.
 func (a *MachineAgent) limitLogins(creds params.Creds) error {
 	err := a.limitLoginsDuringRestore(creds)
