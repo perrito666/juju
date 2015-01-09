@@ -131,6 +131,14 @@ func (status Status) Matches(candidate Status) bool {
 	return status == candidate
 }
 
+type AgentStatusSetter interface {
+	SetAgentStatus(status Status, info string, data map[string]interface{}) error
+}
+
+type CharmStatusSetter interface {
+	SetCharmStatus(status Status, info string, data map[string]interface{}) error
+}
+
 type StatusSetter interface {
 	SetStatus(status Status, info string, data map[string]interface{}) error
 }
@@ -262,6 +270,21 @@ func (doc *unitAgentStatusDoc) validateSet() error {
 		return errors.Errorf("cannot set status data when status is %q", doc.Status)
 	}
 	return nil
+}
+
+type unitStatusDoc struct {
+	statusDoc
+}
+
+// newUnitStatusDoc creates a new unitStatusDoc with the given status and other data.
+func newUnitStatusDoc(status Status, info string, data map[string]interface{}) (*unitStatusDoc, error) {
+	doc := &unitStatusDoc{statusDoc{
+		Status:     status,
+		StatusInfo: info,
+		StatusData: data,
+	}}
+	//TODO (perrito66&) validation here
+	return doc, nil
 }
 
 // getStatus retrieves the status document associated with the given

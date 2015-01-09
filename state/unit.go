@@ -160,9 +160,29 @@ func unitGlobalKey(name string) string {
 	return "u#" + name
 }
 
+// unitGlobalKey returns the global database key for the named unit.
+func unitAgentGlobalKey(name string) string {
+	return unitGlobalKey(name)
+}
+
+// unitCharmGlobalKey returns the global database key for the named unit.
+func unitCharmGlobalKey(name string) string {
+	return "u#" + name + "#charm"
+}
+
 // globalKey returns the global database key for the unit.
 func (u *Unit) globalKey() string {
 	return unitGlobalKey(u.doc.Name)
+}
+
+// globalAgentKey returns the global database key for the unit.
+func (u *Unit) globalAgentKey() string {
+	return unitAgentGlobalKey(u.doc.Name)
+}
+
+// globalCharmKey returns the global database key for the unit.
+func (u *Unit) globalCharmKey() string {
+	return unitCharmGlobalKey(u.doc.Name)
 }
 
 // Life returns whether the unit is Alive, Dying or Dead.
@@ -740,6 +760,48 @@ func (u *Unit) SetStatus(status Status, info string, data map[string]interface{}
 		Assert: notDeadDoc,
 	},
 		updateStatusOp(u.st, u.globalKey(), doc.statusDoc),
+	}
+	err = u.st.runTransaction(ops)
+	if err != nil {
+		return fmt.Errorf("cannot set status of unit's %q agent: %v", u, onAbort(err, ErrDead))
+	}
+	return nil
+}
+
+// SetAgentStatus sets the status of the unit agent. The optional values
+// allow to pass additional helpful status data.
+func (u *Unit) SetAgentStatus(status Status, info string, data map[string]interface{}) error {
+	doc, err := newUnitAgentStatusDoc(status, info, data)
+	if err != nil {
+		return err
+	}
+	ops := []txn.Op{{
+		C:      unitsC,
+		Id:     u.doc.DocID,
+		Assert: notDeadDoc,
+	},
+		updateStatusOp(u.st, u.globalAgentKey(), doc.statusDoc),
+	}
+	err = u.st.runTransaction(ops)
+	if err != nil {
+		return fmt.Errorf("cannot set status of unit's %q agent: %v", u, onAbort(err, ErrDead))
+	}
+	return nil
+}
+
+// SetCharmStatus sets the status of the unit agent. The optional values
+// allow to pass additional helpful status data.
+func (u *Unit) SetCharmStatus(status Status, info string, data map[string]interface{}) error {
+	doc, err := newUnitStatusDoc(status, info, data)
+	if err != nil {
+		return err
+	}
+	ops := []txn.Op{{
+		C:      unitsC,
+		Id:     u.doc.DocID,
+		Assert: notDeadDoc,
+	},
+		updateStatusOp(u.st, u.globalCharmKey(), doc.statusDoc),
 	}
 	err = u.st.runTransaction(ops)
 	if err != nil {

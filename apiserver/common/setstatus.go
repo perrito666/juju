@@ -126,3 +126,59 @@ func (s *StatusSetter) UpdateStatus(args params.SetStatus) (params.ErrorResults,
 	}
 	return result, nil
 }
+
+//---------------------------------------------------------------
+
+// CharmStatusSetter implements a common SetStatus method for use by
+// various facades.
+type CharmStatusSetter StatusSetter
+
+//AgenttStatusSetter implements a common SetStatus method for use by
+// various facades.
+type AgentStatusSetter StatusSetter
+
+// NewStatusSetter returns a new StatusSetter. The GetAuthFunc will be
+// used on each invocation of SetStatus to determine current
+// permissions.
+func NewCharmStatusSetter(st state.EntityFinder, getCanModify GetAuthFunc) *CharmStatusSetter {
+	return &CharmStatusSetter{
+		st:           st,
+		getCanModify: getCanModify,
+	}
+}
+
+// NewStatusSetter returns a new StatusSetter. The GetAuthFunc will be
+// used on each invocation of SetStatus to determine current
+// permissions.
+func NewAgentStatusSetter(st state.EntityFinder, getCanModify GetAuthFunc) *AgentStatusSetter {
+	return &AgentStatusSetter{
+		st:           st,
+		getCanModify: getCanModify,
+	}
+}
+
+func (s *AgentStatusSetter) setEntityStatus(tag names.Tag, status params.Status, info string, data map[string]interface{}) error {
+	entity, err := s.st.FindEntity(tag)
+	if err != nil {
+		return err
+	}
+	switch entity := entity.(type) {
+	case state.AgentStatusSetter:
+		return entity.SetAgentStatus(state.Status(status), info, data)
+	default:
+		return NotSupportedError(tag, fmt.Sprintf("setting status, %T", entity))
+	}
+}
+
+func (s *CharmStatusSetter) setEntityStatus(tag names.Tag, status params.Status, info string, data map[string]interface{}) error {
+	entity, err := s.st.FindEntity(tag)
+	if err != nil {
+		return err
+	}
+	switch entity := entity.(type) {
+	case state.CharmStatusSetter:
+		return entity.SetCharmStatus(state.Status(status), info, data)
+	default:
+		return NotSupportedError(tag, fmt.Sprintf("setting status, %T", entity))
+	}
+}
