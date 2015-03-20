@@ -337,9 +337,13 @@ func (doc *unitAgentStatusDoc) validateSet() error {
 	// For safety; no code will use these deprecated values.
 	case StatusPending, StatusDown, StatusStarted, StatusStopped:
 		return errors.Errorf("status %q is deprecated and invalid", doc.Status)
-	case StatusAllocating, StatusFailed: // FIXME (update business rule)
+	case StatusAllocating: // FIXME (update business rule)
 		return errors.Errorf("cannot set status %q", doc.Status)
-	case StatusError:
+	case StatusError: // Legacy failure, could represent a hook error.
+		if doc.StatusInfo == "" {
+			return errors.Errorf("cannot set status %q without info", doc.Status)
+		}
+	case StatusFailed: // Current failure, represents an agent error.
 		if doc.StatusInfo == "" {
 			return errors.Errorf("cannot set status %q without info", doc.Status)
 		}

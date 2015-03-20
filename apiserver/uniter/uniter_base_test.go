@@ -120,50 +120,18 @@ func (s *uniterBaseSuite) testUniterFailsWithNonUnitAgentUser(
 	c.Assert(err, gc.ErrorMatches, "permission denied")
 }
 
-func (s *uniterBaseSuite) testSetStatus(
-	c *gc.C,
-	facade interface {
-		SetStatus(args params.SetStatus) (params.ErrorResults, error)
-	},
-) {
-	err := s.wordpressUnit.SetAgentStatus(state.StatusIdle, "blah", nil)
-	c.Assert(err, jc.ErrorIsNil)
-	err = s.mysqlUnit.SetAgentStatus(state.StatusIdle, "foo", nil)
-	c.Assert(err, jc.ErrorIsNil)
-
-	args := params.SetStatus{
-		Entities: []params.EntityStatus{
-			{Tag: "unit-mysql-0", Status: params.StatusError, Info: "not really"},
-			{Tag: "unit-wordpress-0", Status: params.StatusLost, Info: "foobar"},
-			{Tag: "unit-foo-42", Status: params.StatusActive, Info: "blah"},
-		}}
-	result, err := facade.SetStatus(args)
-	c.Assert(err, jc.ErrorIsNil)
-	c.Assert(result, gc.DeepEquals, params.ErrorResults{
-		Results: []params.ErrorResult{
-			{apiservertesting.ErrUnauthorized},
-			{nil},
-			{apiservertesting.ErrUnauthorized},
-		},
-	})
-
-	// Verify mysqlUnit - no change.
-	status, info, _, err := s.mysqlUnit.AgentStatus()
-	c.Assert(err, jc.ErrorIsNil)
-	c.Assert(status, gc.Equals, state.StatusIdle)
-	c.Assert(info, gc.Equals, "foo")
-	// ...wordpressUnit is fine though.
-	status, info, _, err = s.wordpressUnit.AgentStatus()
-	c.Assert(err, jc.ErrorIsNil)
-	c.Assert(status, gc.Equals, state.StatusLost)
-	c.Assert(info, gc.Equals, "foobar")
+type facade interface {
+	SetAgentStatus(args params.SetStatus) (params.ErrorResults, error)
 }
 
-func (s *uniterBaseSuite) testSetAgentStatus(
+type legacyFacade interface {
+	SetStatus(args params.SetStatus) (params.ErrorResults, error)
+}
+
+func (s *uniterBaseSuite) statusTest(
 	c *gc.C,
-	facade interface {
-		SetAgentStatus(args params.SetStatus) (params.ErrorResults, error)
-	},
+	f facade,
+	lf legacyFacade,
 ) {
 	err := s.wordpressUnit.SetAgentStatus(state.StatusIdle, "blah", nil)
 	c.Assert(err, jc.ErrorIsNil)
@@ -176,7 +144,12 @@ func (s *uniterBaseSuite) testSetAgentStatus(
 			{Tag: "unit-wordpress-0", Status: params.StatusLost, Info: "foobar"},
 			{Tag: "unit-foo-42", Status: params.StatusActive, Info: "blah"},
 		}}
-	result, err := facade.SetAgentStatus(args)
+	var result params.ErrorResults
+	if lf != nil {
+		result, err = lf.SetStatus(args)
+	} else {
+		result, err = f.SetAgentStatus(args)
+	}
 	c.Assert(err, jc.ErrorIsNil)
 	c.Assert(result, gc.DeepEquals, params.ErrorResults{
 		Results: []params.ErrorResult{
@@ -196,6 +169,15 @@ func (s *uniterBaseSuite) testSetAgentStatus(
 	c.Assert(err, jc.ErrorIsNil)
 	c.Assert(status, gc.Equals, state.StatusLost)
 	c.Assert(info, gc.Equals, "foobar")
+
+}
+
+func (s *uniterBaseSuite) testSetStatus(c *gc.C, f legacyFacade) {
+	s.statusTest(c, nil, f)
+}
+
+func (s *uniterBaseSuite) testSetAgentStatus(c *gc.C, f facade) {
+	s.statusTest(c, f, nil)
 }
 
 func (s *uniterBaseSuite) testSetUnitStatus(

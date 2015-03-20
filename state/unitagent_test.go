@@ -33,8 +33,8 @@ func (s *UnitAgentSuite) SetUpTest(c *gc.C) {
 
 func (s *UnitAgentSuite) TestGetSetStatusWhileAlive(c *gc.C) {
 	agent := s.unit.Agent().(*state.UnitAgent)
-	err := agent.SetStatus(state.StatusError, "", nil)
-	c.Assert(err, gc.ErrorMatches, `cannot set status "error" without info`)
+	err := agent.SetStatus(state.StatusFailed, "", nil)
+	c.Assert(err, gc.ErrorMatches, `cannot set status "failed" without info`)
 	err = agent.SetStatus(state.Status("vliegkat"), "orville", nil)
 	c.Assert(err, gc.ErrorMatches, `cannot set invalid status "vliegkat"`)
 
@@ -52,14 +52,14 @@ func (s *UnitAgentSuite) TestGetSetStatusWhileAlive(c *gc.C) {
 	c.Assert(info, gc.Equals, "")
 	c.Assert(data, gc.HasLen, 0)
 
-	err = agent.SetStatus(state.StatusError, "test-hook failed", map[string]interface{}{
+	err = agent.SetStatus(state.StatusFailed, "the agent is unresponsive", map[string]interface{}{
 		"foo": "bar",
 	})
 	c.Assert(err, jc.ErrorIsNil)
 	status, info, data, err = agent.Status()
 	c.Assert(err, jc.ErrorIsNil)
-	c.Assert(status, gc.Equals, state.StatusError)
-	c.Assert(info, gc.Equals, "test-hook failed")
+	c.Assert(status, gc.Equals, state.StatusFailed)
+	c.Assert(info, gc.Equals, "the agent is unresponsive")
 	c.Assert(data, gc.DeepEquals, map[string]interface{}{
 		"foo": "bar",
 	})
@@ -90,7 +90,7 @@ func (s *UnitAgentSuite) TestGetSetStatusDataStandard(c *gc.C) {
 	c.Assert(err, jc.ErrorIsNil)
 
 	// Regular status setting with data.
-	err = agent.SetStatus(state.StatusError, "test-hook failed", map[string]interface{}{
+	err = agent.SetStatus(state.StatusFailed, "agent somehow failed", map[string]interface{}{
 		"1st-key": "one",
 		"2nd-key": 2,
 		"3rd-key": true,
@@ -100,7 +100,7 @@ func (s *UnitAgentSuite) TestGetSetStatusDataStandard(c *gc.C) {
 	status, info, data, err := agent.Status()
 	c.Assert(err, jc.ErrorIsNil)
 	c.Assert(status, gc.Equals, state.StatusError)
-	c.Assert(info, gc.Equals, "test-hook failed")
+	c.Assert(info, gc.Equals, "agent somehow failed")
 	c.Assert(data, gc.DeepEquals, map[string]interface{}{
 		"1st-key": "one",
 		"2nd-key": 2,
@@ -116,7 +116,7 @@ func (s *UnitAgentSuite) TestGetSetStatusDataMongo(c *gc.C) {
 	c.Assert(err, jc.ErrorIsNil)
 
 	// Status setting with MongoDB special values.
-	err = agent.SetStatus(state.StatusError, "mongo", map[string]interface{}{
+	err = agent.SetStatus(state.StatusFailed, "mongo", map[string]interface{}{
 		`{name: "Joe"}`: "$where",
 		"eval":          `eval(function(foo) { return foo; }, "bar")`,
 		"mapReduce":     "mapReduce",
@@ -126,7 +126,7 @@ func (s *UnitAgentSuite) TestGetSetStatusDataMongo(c *gc.C) {
 
 	status, info, data, err := agent.Status()
 	c.Assert(err, jc.ErrorIsNil)
-	c.Assert(status, gc.Equals, state.StatusError)
+	c.Assert(status, gc.Equals, state.StatusFailed)
 	c.Assert(info, gc.Equals, "mongo")
 	c.Assert(data, gc.DeepEquals, map[string]interface{}{
 		`{name: "Joe"}`: "$where",
@@ -149,14 +149,14 @@ func (s *UnitAgentSuite) TestGetSetStatusDataChange(c *gc.C) {
 		"2nd-key": 2,
 		"3rd-key": true,
 	}
-	err = agent.SetStatus(state.StatusError, "test-hook failed", data)
+	err = agent.SetStatus(state.StatusFailed, "agent somehow failed", data)
 	c.Assert(err, jc.ErrorIsNil)
 	data["4th-key"] = 4.0
 
 	status, info, data, err := agent.Status()
 	c.Assert(err, jc.ErrorIsNil)
-	c.Assert(status, gc.Equals, state.StatusError)
-	c.Assert(info, gc.Equals, "test-hook failed")
+	c.Assert(status, gc.Equals, state.StatusFailed)
+	c.Assert(info, gc.Equals, "agent somehow failed")
 	c.Assert(data, gc.DeepEquals, map[string]interface{}{
 		"1st-key": "one",
 		"2nd-key": 2,
