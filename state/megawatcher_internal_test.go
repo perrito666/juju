@@ -1046,7 +1046,7 @@ func (s *storeManagerStateSuite) TestChangeUnits(c *gc.C) {
 			c.Assert(err, jc.ErrorIsNil)
 			err = u.OpenPorts("tcp", 5555, 5558)
 			c.Assert(err, jc.ErrorIsNil)
-			err = u.SetAgentStatus(StatusError, "failure", nil)
+			err = u.SetStatus(StatusError, "failure", nil)
 			c.Assert(err, jc.ErrorIsNil)
 
 			return changeTestCase{

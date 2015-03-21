@@ -46,12 +46,19 @@ func (u *UnitAgent) Status() (status Status, info string, data map[string]interf
 // SetStatus sets the status of the unit agent. The optional values
 // allow to pass additional helpful status data.
 func (u *UnitAgent) SetStatus(status Status, info string, data map[string]interface{}) error {
-	doc, err := newUnitAgentStatusDoc(status, info, data)
+	doc, workloadDoc, err := newUnitAgentStatusDoc(status, info, data)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	ops := []txn.Op{
-		updateStatusOp(u.st, u.globalKey(), doc.statusDoc),
+	var ops []txn.Op
+	if doc != nil {
+		ops = []txn.Op{
+			updateStatusOp(u.st, u.globalKey(), doc.statusDoc),
+		}
+	} else {
+		ops = []txn.Op{
+			updateStatusOp(u.st, u.globalUnitKey(), workloadDoc.statusDoc),
+		}
 	}
 	err = u.st.runTransaction(ops)
 	if err != nil {
@@ -68,6 +75,11 @@ func unitAgentGlobalKey(name string) string {
 // globalKey returns the global database key for the unit.
 func (u *UnitAgent) globalKey() string {
 	return unitAgentGlobalKey(u.name)
+}
+
+// globalUnitKey returns the global database key for the units workload.
+func (u *UnitAgent) globalUnitKey() string {
+	return unitGlobalKey(u.name)
 }
 
 // Tag returns a names.Tag identifying this agent's unit.

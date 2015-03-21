@@ -99,7 +99,7 @@ func (s *UnitAgentSuite) TestGetSetStatusDataStandard(c *gc.C) {
 
 	status, info, data, err := agent.Status()
 	c.Assert(err, jc.ErrorIsNil)
-	c.Assert(status, gc.Equals, state.StatusError)
+	c.Assert(status, gc.Equals, state.StatusFailed)
 	c.Assert(info, gc.Equals, "agent somehow failed")
 	c.Assert(data, gc.DeepEquals, map[string]interface{}{
 		"1st-key": "one",

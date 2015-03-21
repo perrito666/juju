@@ -289,21 +289,41 @@ func (doc machineStatusDoc) validateSet(allowPending bool) error {
 	return nil
 }
 
+// ErrIsWorkloadStatus indicates that the status being set is now handled by Workloads.
+var ErrIsWorkloadStatus = errors.Errorf("this status now belongs to workloads instead of agents")
+
+func isWorkloadStatus(err error) bool {
+	switch err {
+	case ErrIsWorkloadStatus:
+		return true
+	}
+	return false
+}
+
 type unitAgentStatusDoc struct {
 	statusDoc
 }
 
 // newUnitAgentStatusDoc creates a new unitAgentStatusDoc with the given status and other data.
-func newUnitAgentStatusDoc(status Status, info string, data map[string]interface{}) (*unitAgentStatusDoc, error) {
+func newUnitAgentStatusDoc(status Status, info string, data map[string]interface{}) (*unitAgentStatusDoc, *unitStatusDoc, error) {
 	doc := &unitAgentStatusDoc{statusDoc{
 		Status:     status,
 		StatusInfo: info,
 		StatusData: data,
 	}}
-	if err := doc.validateSet(); err != nil {
-		return nil, err
+	err := doc.validateSet()
+	if isWorkloadStatus(err) {
+		workloadDoc, err := newUnitStatusDoc(status, info, data)
+		if err != nil {
+			return nil, nil, errors.Annotate(err, "cannot convert agent status into workload status")
+		}
+		return nil, workloadDoc, nil
+
 	}
-	return doc, nil
+	if err != nil {
+		return nil, nil, err
+	}
+	return doc, nil, nil
 }
 
 // unitAgentStatusValid returns true if status has a known value for unit agents.
@@ -327,17 +347,38 @@ func unitAgentStatusValid(status Status) bool {
 	}
 }
 
+func (doc *unitAgentStatusDoc) translateLegacyStatus() error {
+	//pending, installed, started, error, stopped, down
+	switch doc.Status {
+	case StatusInstalling:
+		//TODO (perrito666) should we take the liberty to set info too?
+		doc.Status = StatusExecuting
+	case StatusStarted:
+		doc.Status = StatusIdle
+	case StatusError:
+		// This one is a bit odd since this status is of the workload
+		return ErrIsWorkloadStatus
+	case StatusStopped:
+		doc.Status = StatusIdle
+	case StatusDown:
+		doc.Status = StatusTerminated
+	}
+	return nil
+}
+
 // validateSet returns an error if the unitAgentStatusDoc does not represent a sane
 // SetStatus operation for a unit agent.
 func (doc *unitAgentStatusDoc) validateSet() error {
 	if !unitAgentStatusValid(doc.Status) {
 		return errors.Errorf("cannot set invalid status %q", doc.Status)
 	}
+	err := doc.translateLegacyStatus()
+	if err != nil {
+		return err
+	}
+
 	switch doc.Status {
-	// For safety; no code will use these deprecated values.
-	case StatusPending, StatusDown, StatusStarted, StatusStopped:
-		return errors.Errorf("status %q is deprecated and invalid", doc.Status)
-	case StatusAllocating: // FIXME (update business rule)
+	case StatusAllocating, StatusPending:
 		return errors.Errorf("cannot set status %q", doc.Status)
 	case StatusError: // Legacy failure, could represent a hook error.
 		if doc.StatusInfo == "" {
@@ -348,7 +389,7 @@ func (doc *unitAgentStatusDoc) validateSet() error {
 			return errors.Errorf("cannot set status %q without info", doc.Status)
 		}
 	}
-	if doc.StatusData != nil && doc.Status != StatusError {
+	if doc.StatusData != nil && doc.Status != StatusError && doc.Status != StatusFailed {
 		return errors.Errorf("cannot set status data when status is %q", doc.Status)
 	}
 	return nil
