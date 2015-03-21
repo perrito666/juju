@@ -52,6 +52,11 @@ type Provider interface {
 	// Scope returns the scope of storage managed by this provider.
 	Scope() Scope
 
+	// Dynamic reports whether or not the storage provider is capable
+	// of dynamic storage provisioning. Non-dynamic storage must be
+	// created at the time a machine is provisioned.
+	Dynamic() bool
+
 	// ValidateConfig validates the provided storage provider config,
 	// returning an error if it is invalid.
 	ValidateConfig(*Config) error
@@ -150,6 +155,12 @@ type VolumeParams struct {
 	// once the instance is created there are still unprovisioned volumes,
 	// the dynamic storage provisioner will take care of creating them.
 	Attachment *VolumeAttachmentParams
+}
+
+// IsPersistent returns true if the params has persistent set to true.
+func (p *VolumeParams) IsPersistent() bool {
+	v, _ := p.Attributes[Persistent].(bool)
+	return v
 }
 
 // VolumeAttachmentParams is a set of parameters for volume attachment or

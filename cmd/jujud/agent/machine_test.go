@@ -418,9 +418,7 @@ func patchDeployContext(c *gc.C, st *state.State) (*fakeContext, func()) {
 }
 
 func (s *commonMachineSuite) setFakeMachineAddresses(c *gc.C, machine *state.Machine) {
-	addrs := []network.Address{
-		network.NewAddress("0.1.2.3", network.ScopeUnknown),
-	}
+	addrs := network.NewAddresses("0.1.2.3")
 	err := machine.SetAddresses(addrs...)
 	c.Assert(err, jc.ErrorIsNil)
 	// Set the addresses in the environ instance as well so that if the instance poller
@@ -554,7 +552,7 @@ func (s *MachineSuite) TestManageEnvironRunsInstancePoller(c *gc.C) {
 	m, instId := s.waitProvisioned(c, units[0])
 	insts, err := s.Environ.Instances([]instance.Id{instId})
 	c.Assert(err, jc.ErrorIsNil)
-	addrs := []network.Address{network.NewAddress("1.2.3.4", network.ScopeUnknown)}
+	addrs := network.NewAddresses("1.2.3.4")
 	dummy.SetInstanceAddresses(insts[0], addrs)
 	dummy.SetInstanceStatus(insts[0], "running")
 
@@ -1215,8 +1213,7 @@ func (s *MachineSuite) TestMachineAgentRunsMachineStorageWorker(c *gc.C) {
 
 	s.SetFeatureFlags(feature.Storage)
 	featureflag.SetFlagsFromEnvironment(osenv.JujuFeatureFlagEnvKey)
-	// TODO(wallyworld) - worker is currently disabled even with feature flag
-	s.testMachineAgentRunsMachineStorageWorker(c, false, coretesting.LongWait)
+	s.testMachineAgentRunsMachineStorageWorker(c, true, coretesting.LongWait)
 }
 
 func (s *MachineSuite) testMachineAgentRunsMachineStorageWorker(c *gc.C, shouldRun bool, timeout time.Duration) {
@@ -1227,7 +1224,12 @@ func (s *MachineSuite) testMachineAgentRunsMachineStorageWorker(c *gc.C, shouldR
 	defer func() { c.Check(a.Stop(), jc.ErrorIsNil) }()
 
 	started := make(chan struct{})
-	newWorker := func(storageDir string, _ storageprovisioner.VolumeAccessor, _ storageprovisioner.LifecycleManager) worker.Worker {
+	newWorker := func(
+		storageDir string,
+		_ storageprovisioner.VolumeAccessor,
+		_ storageprovisioner.FilesystemAccessor,
+		_ storageprovisioner.LifecycleManager,
+	) worker.Worker {
 		// storageDir is not empty for machine scoped storage provisioners
 		c.Assert(storageDir, gc.Not(gc.Equals), "")
 		close(started)
@@ -1266,7 +1268,12 @@ func (s *MachineSuite) testMachineAgentRunsEnvironStorageWorkers(c *gc.C, should
 	environWorkerStarted := false
 	numWorkers := 0
 	started := make(chan struct{})
-	newWorker := func(storageDir string, _ storageprovisioner.VolumeAccessor, _ storageprovisioner.LifecycleManager) worker.Worker {
+	newWorker := func(
+		storageDir string,
+		_ storageprovisioner.VolumeAccessor,
+		_ storageprovisioner.FilesystemAccessor,
+		_ storageprovisioner.LifecycleManager,
+	) worker.Worker {
 		// storageDir is empty for environ storage provisioners
 		if storageDir == "" {
 			environWorkerStarted = true
