@@ -661,6 +661,9 @@ func (a *MachineAgent) upgradeMongoWatcher(st *state.State, stopch <-chan struct
 			if expectedVersion == mongo.Mongo24 {
 				continue
 			}
+			if err := m.SetStopMongoUntilVersion(mongo.Mongo24); err != nil {
+				return errors.Annotate(err, "cannot reset stop mongo flag")
+			}
 			var isMaster bool
 			isMaster, err = mongo.IsMaster(st.MongoSession(), m)
 			if err != nil {

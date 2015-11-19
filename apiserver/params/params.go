@@ -10,6 +10,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/juju/loggo"
+	"github.com/juju/replicaset"
 	"github.com/juju/utils/proxy"
 	"github.com/juju/utils/ssh"
 	"gopkg.in/juju/charm.v6-unstable"
@@ -813,6 +814,13 @@ type UpgradeMongoParams struct {
 // MongoUpgradeResults holds the results of an attempt
 // to enter upgrade mongo mode.
 type MongoUpgradeResults struct {
-	Master  state.HAMember
-	Members []state.HAMember
+	RsMembers []replicaset.Member
+	Master    state.HAMember
+	Members   []state.HAMember
+}
+
+// ResumeReplicationParams holds the members of a HA that
+// must be resumed.
+type ResumeReplicationParams struct {
+	Members []replicaset.Member
 }
