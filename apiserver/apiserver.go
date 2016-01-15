@@ -382,7 +382,6 @@ func (srv *Server) run(lis net.Listener) {
 		},
 	)
 	// For backwards compatibility we register all the old paths
-
 	handleAll(mux, "/log", newDebugLogDBHandler(httpCtxt, srvDying))
 
 	handleAll(mux, "/charms",

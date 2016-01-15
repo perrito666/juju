@@ -77,7 +77,6 @@ import (
 	"github.com/juju/juju/worker/deployer"
 	"github.com/juju/juju/worker/diskmanager"
 	"github.com/juju/juju/worker/instancepoller"
-	"github.com/juju/juju/worker/logsender"
 	"github.com/juju/juju/worker/machiner"
 	"github.com/juju/juju/worker/networker"
 	"github.com/juju/juju/worker/peergrouper"
@@ -223,16 +222,8 @@ func (s *commonMachineSuite) configureMachine(c *gc.C, machineId string, vers ve
 func (s *commonMachineSuite) newAgent(c *gc.C, m *state.Machine) *MachineAgent {
 	agentConf := agentConf{dataDir: s.DataDir()}
 	agentConf.ReadConfig(names.NewMachineTag(m.Id()).String())
-	logsCh, err := logsender.InstallBufferedLogWriter(1024)
-	if err != nil {
-		// The log writer might be registerd by this same suite
-		// lets make sure.
-		_ = logsender.UninstallBufferedLogWriter()
-		logsCh, err = logsender.InstallBufferedLogWriter(1024)
-	}
-	c.Assert(err, jc.ErrorIsNil)
 	machineAgentFactory := MachineAgentFactoryFn(
-		&agentConf, logsCh, &mockLoopDeviceManager{}, c.MkDir(),
+		&agentConf, nil, &mockLoopDeviceManager{}, c.MkDir(),
 	)
 	return machineAgentFactory(m.Id())
 }

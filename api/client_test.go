@@ -381,6 +381,17 @@ func (s *clientSuite) TestUnshareEnvironmentMissingUser(c *gc.C) {
 	c.Assert(c.GetTestLog(), jc.Contains, logMsg)
 }
 
+func (s *clientSuite) TestWatchDebugLogConnected(c *gc.C) {
+	client := s.APIState.Client()
+	// Use the no tail option so we don't try to start a tailing cursor
+	// on the oplog when there is no oplog configured in mongo as the tests
+	// don't set up mongo in replicaset mode.
+	reader, err := client.WatchDebugLog(api.DebugLogParams{NoTail: true})
+	c.Assert(err, jc.ErrorIsNil)
+	c.Assert(reader, gc.NotNil)
+	reader.Close()
+}
+
 func (s *clientSuite) TestConnectStreamRequiresSlashPathPrefix(c *gc.C) {
 	reader, err := s.APIState.ConnectStream("foo", nil)
 	c.Assert(err, gc.ErrorMatches, `path must start with "/"`)
@@ -436,6 +447,7 @@ func (s *clientSuite) TestWatchDebugLogParamsEncoded(c *gc.C) {
 		Backlog:       200,
 		Level:         loggo.ERROR,
 		Replay:        true,
+		NoTail:        true,
 	}
 
 	client := s.APIState.Client()
@@ -453,6 +465,7 @@ func (s *clientSuite) TestWatchDebugLogParamsEncoded(c *gc.C) {
 		"backlog":       {"200"},
 		"level":         {"ERROR"},
 		"replay":        {"true"},
+		"noTail":        {"true"},
 	})
 }
 
