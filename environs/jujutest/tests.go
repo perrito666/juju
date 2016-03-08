@@ -87,8 +87,8 @@ func (t *Tests) SetUpTest(c *gc.C) {
 	t.ToolsFixture.SetUpTest(c)
 	stor, err := filestorage.NewFileStorageWriter(storageDir)
 	c.Assert(err, jc.ErrorIsNil)
-	t.UploadFakeTools(c, stor, "released", "released")
-	t.toolsStorage = stor
+	err = envtesting.UploadFakeToolsToSimpleStreams(stor, "released", "released")
+	c.Assert(err, jc.ErrorIsNil)
 	t.ConfigStore = configstore.NewMem()
 	t.ControllerStore = jujuclienttesting.NewMemStore()
 }
