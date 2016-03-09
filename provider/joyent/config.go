@@ -18,20 +18,13 @@ import (
 )
 
 const (
-	SdcAccount          = "SDC_ACCOUNT"
-	SdcKeyId            = "SDC_KEY_ID"
-	SdcUrl              = "SDC_URL"
-	MantaUser           = "MANTA_USER"
-	MantaKeyId          = "MANTA_KEY_ID"
-	MantaUrl            = "MANTA_URL"
-	MantaPrivateKeyFile = "MANTA_PRIVATE_KEY_FILE"
+	SdcAccount = "SDC_ACCOUNT"
+	SdcKeyId   = "SDC_KEY_ID"
+	SdcUrl     = "SDC_URL"
 
 	sdcUser        = "sdc-user"
 	sdcKeyId       = "sdc-key-id"
 	sdcUrl         = "sdc-url"
-	mantaUser      = "manta-user"
-	mantaKeyId     = "manta-key-id"
-	mantaUrl       = "manta-url"
 	privateKeyPath = "private-key-path"
 	algorithm      = "algorithm"
 	controlDir     = "control-dir"
@@ -39,22 +32,15 @@ const (
 )
 
 var environmentVariables = map[string]string{
-	sdcUser:        SdcAccount,
-	sdcKeyId:       SdcKeyId,
-	sdcUrl:         SdcUrl,
-	mantaUser:      MantaUser,
-	mantaKeyId:     MantaKeyId,
-	mantaUrl:       MantaUrl,
-	privateKeyPath: MantaPrivateKeyFile,
+	sdcUser:  SdcAccount,
+	sdcKeyId: SdcKeyId,
+	sdcUrl:   SdcUrl,
 }
 
 var configFields = schema.Fields{
 	sdcUser:        schema.String(),
 	sdcKeyId:       schema.String(),
 	sdcUrl:         schema.String(),
-	mantaUser:      schema.String(),
-	mantaKeyId:     schema.String(),
-	mantaUrl:       schema.String(),
 	privateKeyPath: schema.String(),
 	algorithm:      schema.String(),
 	controlDir:     schema.String(),
@@ -63,38 +49,29 @@ var configFields = schema.Fields{
 
 var configDefaults = schema.Defaults{
 	sdcUrl:         "https://us-west-1.api.joyentcloud.com",
-	mantaUrl:       "https://us-east.manta.joyent.com",
 	algorithm:      "rsa-sha256",
 	privateKeyPath: schema.Omit,
 	sdcUser:        schema.Omit,
 	sdcKeyId:       schema.Omit,
-	mantaUser:      schema.Omit,
-	mantaKeyId:     schema.Omit,
 	privateKey:     schema.Omit,
 }
 
 var requiredFields = []string{
 	sdcUrl,
-	mantaUrl,
 	algorithm,
 	sdcUser,
 	sdcKeyId,
-	mantaUser,
-	mantaKeyId,
 	// privatekey and privatekeypath are handled separately
 }
 
 var configSecretFields = []string{
 	sdcUser,
 	sdcKeyId,
-	mantaUser,
-	mantaKeyId,
 	privateKey,
 }
 
 var configImmutableFields = []string{
 	sdcUrl,
-	mantaUrl,
 	privateKeyPath,
 	privateKey,
 	algorithm,
@@ -204,18 +181,6 @@ func (ecfg *environConfig) sdcUser() string {
 
 func (ecfg *environConfig) sdcKeyId() string {
 	return ecfg.attrs[sdcKeyId].(string)
-}
-
-func (ecfg *environConfig) mantaUrl() string {
-	return ecfg.attrs[mantaUrl].(string)
-}
-
-func (ecfg *environConfig) mantaUser() string {
-	return ecfg.attrs[mantaUser].(string)
-}
-
-func (ecfg *environConfig) mantaKeyId() string {
-	return ecfg.attrs[mantaKeyId].(string)
 }
 
 func (ecfg *environConfig) privateKey() string {
