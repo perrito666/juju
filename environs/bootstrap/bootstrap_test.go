@@ -66,6 +66,9 @@ func (s *bootstrapSuite) SetUpTest(c *gc.C) {
 	s.PatchValue(&jujuversion.Current, coretesting.FakeVersionNumber)
 	err = envtesting.UploadFakeToolsToSimpleStreams(stor, "released", "released")
 	c.Assert(err, jc.ErrorIsNil)
+	err = envtesting.UploadFakeToolsToSimpleStreams(stor, "devel", "devel")
+	c.Assert(err, jc.ErrorIsNil)
+
 }
 
 func (s *bootstrapSuite) TearDownTest(c *gc.C) {
