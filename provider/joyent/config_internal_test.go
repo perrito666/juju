@@ -4,8 +4,6 @@
 package joyent
 
 import (
-	"os"
-
 	gc "gopkg.in/check.v1"
 
 	coretesting "github.com/juju/juju/testing"
@@ -40,22 +38,6 @@ func (s *InternalSuite) TestEnsurePrivateKeyPathSet(c *gc.C) {
 	err := ensurePrivateKeyOrPath(e)
 	c.Assert(err, gc.IsNil)
 	c.Assert(e.attrs, gc.DeepEquals, m)
-}
-
-func (s *InternalSuite) TestEnsurePrivateKeyEnvPath(c *gc.C) {
-	// if path is set in env, use it
-	old := os.Getenv("MANTA_PRIVATE_KEY_FILE")
-	err := os.Setenv("MANTA_PRIVATE_KEY_FILE", "foobar")
-	defer os.Setenv("MANTA_PRIVATE_KEY_FILE", old)
-	c.Assert(err, gc.IsNil)
-
-	e := &environConfig{attrs: map[string]interface{}{}}
-
-	err = ensurePrivateKeyOrPath(e)
-	c.Assert(err, gc.IsNil)
-	c.Assert(e.attrs, gc.DeepEquals, map[string]interface{}{
-		"private-key-path": "foobar",
-	})
 }
 
 func (s *InternalSuite) TestEnsurePrivateKeySet(c *gc.C) {
