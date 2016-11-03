@@ -8,6 +8,7 @@ import (
 
 	"gopkg.in/juju/environschema.v1"
 
+	"github.com/juju/juju/apiserver/params"
 	"github.com/juju/juju/cloud"
 	"github.com/juju/juju/constraints"
 	"github.com/juju/juju/environs/config"
@@ -322,4 +323,8 @@ type InstanceTagger interface {
 	// The specified tags will replace any existing ones with the
 	// same names, but other existing tags will be left alone.
 	TagInstance(id instance.Id, tags map[string]string) error
+}
+
+type InstanceInformationFetcher interface {
+	InstanceTypes(params.InstanceTypesConstraints) (params.InstanceTypesResults, error)
 }

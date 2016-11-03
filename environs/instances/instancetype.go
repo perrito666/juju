@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/juju/juju/apiserver/params"
 	"github.com/juju/juju/constraints"
 )
 
@@ -28,6 +29,27 @@ type InstanceType struct {
 
 func CpuPower(power uint64) *uint64 {
 	return &power
+}
+
+func (itype InstanceType) ToParamsInstanceType() []params.InstanceType {
+	insts := make([]params.InstanceType, len(itype.Arches))
+	for i, _ := range insts {
+		virtType := ""
+		if itype.VirtType != nil {
+			virtType = *itype.VirtType
+		}
+		insts[i] = params.InstanceType{
+			Name:         itype.Name,
+			Arch:         itype.Arches[i],
+			CPUCores:     int(itype.CpuCores),
+			Memory:       int(itype.Mem),
+			RootDiskSize: int(itype.RootDisk),
+			VirtType:     virtType,
+			Deprecated:   itype.Deprecated,
+			Cost:         int(itype.Cost),
+		}
+	}
+	return insts
 }
 
 // match returns true if itype can satisfy the supplied constraints. If so,
