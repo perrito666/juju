@@ -26,6 +26,14 @@ type InstanceType struct {
 	Deprecated bool
 }
 
+// InstanceTypesWithCostMetadata holds an array of InstanceType and metadata
+// about their cost.
+type InstanceTypesWithCostMetadata struct {
+	InstanceTypes []InstanceType
+	CostUnit      string
+	CostCurrency  string
+}
+
 func CpuPower(power uint64) *uint64 {
 	return &power
 }

@@ -442,3 +442,7 @@ func (rc *fakeConn) InstanceDisks(project, zone, instanceId string) ([]*compute.
 	}
 	return rc.AttachedDisks, err
 }
+
+func (rc *fakeConn) ListMachineTypes(prijectID, zone string) (*compute.MachineTypeList, error) {
+	return nil, nil
+}
