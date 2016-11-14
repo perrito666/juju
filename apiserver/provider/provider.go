@@ -29,10 +29,11 @@ func newFacade(st *state.State, _ facade.Resources, auth facade.Authorizer) (*AP
 
 // API publishes an endpoint to obtain provider information.
 type API struct {
-	backend    Backend
-	modelTag   names.ModelTag
-	authorizer facade.Authorizer
-	environNew environs.NewEnvironFunc
+	backend              Backend
+	modelTag             names.ModelTag
+	authorizer           facade.Authorizer
+	environNew           environs.NewEnvironFunc
+	newModelConfigGetter newModelEnvironGetterFunc
 }
 
 // NewAPI returns an API pointer.
@@ -41,16 +42,27 @@ func NewAPI(backend Backend, authorizer facade.Authorizer, envNew environs.NewEn
 		return nil, common.ErrPerm
 	}
 	return &API{
-		backend:    backend,
-		modelTag:   backend.ModelTag(),
-		authorizer: authorizer,
-		environNew: envNew,
+		backend:              backend,
+		modelTag:             backend.ModelTag(),
+		authorizer:           authorizer,
+		environNew:           envNew,
+		newModelConfigGetter: newModelConfigGetter,
 	}, nil
+}
+
+type modelConfigAble interface {
+	Config() (*config.Config, error)
+}
+
+type newModelEnvironGetterFunc func(Backend, modelConfigAble) *modelEnvironConfigGetter
+
+func newModelConfigGetter(b Backend, m modelConfigAble) *modelEnvironConfigGetter {
+	return &modelEnvironConfigGetter{Backend: b, model: m}
 }
 
 type modelEnvironConfigGetter struct {
 	Backend
-	model *state.Model
+	model modelConfigAble
 }
 
 func (st *modelEnvironConfigGetter) ModelConfig() (*config.Config, error) {
@@ -85,7 +97,7 @@ func (e *API) InstanceTypes(cons params.InstanceTypesConstraints) (params.Instan
 	if err != nil {
 		return params.InstanceTypesResults{}, errors.Trace(err)
 	}
-	st := &modelEnvironConfigGetter{Backend: e.backend, model: m}
+	st := e.newModelConfigGetter(e.backend, m)
 	res := make([]params.InstanceTypesResult, len(cons.Constraints))
 
 	env, err := environs.GetEnviron(st, e.environNew)
