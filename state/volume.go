@@ -371,6 +371,15 @@ func (st *State) MachineVolumeAttachments(machine names.MachineTag) ([]VolumeAtt
 // AttachVolume sets the attachment for the given <volume> to the given <machine>
 // or returns error if not possible.
 func (st *State) AttachVolume(machine names.MachineTag, volume names.VolumeTag) error {
+	if _, err := st.VolumeAttachment(machine, volume); err == nil {
+		return errors.AlreadyExistsf("volume %s attachment to machine %s", machine.Id(), volume.Id())
+	}
+	_, err := st.Volume(volume)
+	if err != nil {
+		return errors.Annotatef(err, "finding volume %s", volume.Id())
+	}
+	// TODO(perrito666) check if volume is attached so we dont catch it with
+	// the constraint.
 	attachmentTemplate := []volumeAttachmentTemplate{{
 		tag: volume,
 	}}
@@ -379,7 +388,7 @@ func (st *State) AttachVolume(machine names.MachineTag, volume names.VolumeTag) 
 			{
 				C:      volumesC,
 				Id:     volume.Id(),
-				Assert: bson.M{"attachmentcount": 0},
+				Assert: bson.M{"attachmentcount": 0, "life": Alive},
 				Update: bson.D{{"$inc", bson.D{{"attachmentcount", 1}}}},
 			},
 		}

@@ -15,7 +15,7 @@ import (
 // NewMountVolumeCommand returns a mountVolumeCommand that implements cmd.Command.
 func NewMountVolumeCommand() cmd.Command {
 	cmd := &mountVolumeCommand{}
-	cmd.newAPIFunc = func() (MountAPI, error) {
+	cmd.newAPIFunc = func() (MountVolumeAPI, error) {
 		return cmd.NewStorageAPI()
 	}
 
@@ -24,25 +24,25 @@ func NewMountVolumeCommand() cmd.Command {
 
 func NewUnmountVolumeCommand() cmd.Command {
 	cmd := &unmountVolumeCommand{}
-	cmd.newAPIFunc = func() (UnmountAPI, error) {
+	cmd.newAPIFunc = func() (UnmountVolumeAPI, error) {
 		return cmd.NewStorageAPI()
 	}
 
 	return modelcmd.Wrap(cmd)
 }
 
-type baseMountCommand struct {
+type baseMountVolumeCommand struct {
 	StorageCommandBase
 
 	machineTag names.MachineTag
 	volumeTag  names.VolumeTag
 }
 
-const expectedArgs = 2
+const expectedVolumeArgs = 2
 
-func (c *baseMountCommand) Init(args []string) error {
-	if len(args) != expectedArgs {
-		return errors.Errorf("expected %d arguments, got %d", expectedArgs, len(args))
+func (c *baseMountVolumeCommand) Init(args []string) error {
+	if len(args) != expectedVolumeArgs {
+		return errors.Errorf("expected %d arguments, got %d", expectedVolumeArgs, len(args))
 	}
 	if !names.IsValidMachine(args[0]) {
 		return errors.NotValidf("machine name %q", args[0])
@@ -57,9 +57,9 @@ func (c *baseMountCommand) Init(args []string) error {
 }
 
 type mountVolumeCommand struct {
-	baseMountCommand
+	baseMountVolumeCommand
 
-	newAPIFunc func() (MountAPI, error)
+	newAPIFunc func() (MountVolumeAPI, error)
 }
 
 func (c *mountVolumeCommand) Info() *cmd.Info {
@@ -77,26 +77,26 @@ func (c *mountVolumeCommand) Run(ctx *cmd.Context) (err error) {
 	}
 	defer api.Close()
 
-	mountParams := params.MountParam{
+	mountParams := params.MountVolumeParam{
 		MachineTag: c.machineTag.String(),
 		VolumeTag:  c.volumeTag.String(),
 	}
-	err = api.MountVolume(params.MountParams{
-		MountParams: []params.MountParam{mountParams},
+	err = api.MountVolume(params.MountVolumeParams{
+		MountParams: []params.MountVolumeParam{mountParams},
 	})
 	return err
 }
 
-// MountAPI represents an API connection that allows mounting.
-type MountAPI interface {
-	MountVolume(params.MountParams) error
+// MountVolumeAPI represents an API connection that allows mounting.
+type MountVolumeAPI interface {
+	MountVolume(params.MountVolumeParams) error
 	Close() error
 }
 
 type unmountVolumeCommand struct {
-	baseMountCommand
+	baseMountVolumeCommand
 
-	newAPIFunc func() (UnmountAPI, error)
+	newAPIFunc func() (UnmountVolumeAPI, error)
 }
 
 // Info implements cmd.Command.
@@ -115,18 +115,18 @@ func (c *unmountVolumeCommand) Run(ctx *cmd.Context) (err error) {
 	}
 	defer api.Close()
 
-	unmountParams := params.MountParam{
+	unmountParams := params.MountVolumeParam{
 		MachineTag: c.machineTag.String(),
 		VolumeTag:  c.volumeTag.String(),
 	}
-	err = api.UnmountVolume(params.MountParams{
-		MountParams: []params.MountParam{unmountParams},
+	err = api.UnmountVolume(params.MountVolumeParams{
+		MountParams: []params.MountVolumeParam{unmountParams},
 	})
 	return err
 }
 
-// UnmountAPI represents an API connection that allows unmounting.
-type UnmountAPI interface {
-	UnmountVolume(params.MountParams) error
+// UnmountVolumeAPI represents an API connection that allows unmounting.
+type UnmountVolumeAPI interface {
+	UnmountVolume(params.MountVolumeParams) error
 	Close() error
 }
