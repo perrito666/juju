@@ -369,6 +369,8 @@ func registerCommands(r commandRegistry, ctx *cmd.Context) {
 	r.Register(storage.NewShowCommand())
 	r.Register(storage.NewMountVolumeCommand())
 	r.Register(storage.NewUnmountVolumeCommand())
+	r.Register(storage.NewMountFilesystemCommand())
+	r.Register(storage.NewUnmountFilesystemCommand())
 
 	// Manage spaces
 	r.Register(space.NewAddCommand())

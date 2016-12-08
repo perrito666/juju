@@ -49,7 +49,6 @@ func mountVolume(api *API, mountParam params.MountVolumeParam) error {
 		return err
 	}
 	return nil
-
 }
 
 // UnmountVolume will detach a volume identified by unmountParams.VolumeTag from a
@@ -69,6 +68,58 @@ func unmountVolume(api *API, unmountParam params.MountVolumeParam) error {
 		return err
 	}
 	if err := api.storage.DetachVolume(machineTag, volumeTag); err != nil {
+		return err
+	}
+	return nil
+}
+
+func parseMountFilesystemTags(machine, filesystem string) (names.MachineTag, names.FilesystemTag, error) {
+	machineTag, err := names.ParseMachineTag(machine)
+	if err != nil {
+		return names.MachineTag{}, names.FilesystemTag{}, err
+	}
+	filesystemTag, err := names.ParseFilesystemTag(filesystem)
+	if err != nil {
+		return names.MachineTag{}, names.FilesystemTag{}, err
+	}
+	return machineTag, filesystemTag, err
+}
+
+func (api *API) MountFilesystem(mountParams params.MountFilesystemParams) error {
+	for _, mountParam := range mountParams.MountParams {
+		if err := mountFilesystem(api, mountParam); err != nil {
+			return common.ServerError(err)
+		}
+	}
+	return nil
+}
+
+func mountFilesystem(api *API, mountParam params.MountFilesystemParam) error {
+	machineTag, filesystemTag, err := parseMountFilesystemTags(mountParam.MachineTag, mountParam.FilesystemTag)
+	if err != nil {
+		return err
+	}
+	if err := api.storage.AttachFilesystem(machineTag, filesystemTag); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (api *API) UnmountFilesystem(unmountParams params.MountFilesystemParams) error {
+	for _, unmountParam := range unmountParams.MountParams {
+		if err := unmountFilesystem(api, unmountParam); err != nil {
+			return common.ServerError(err)
+		}
+	}
+	return nil
+}
+
+func unmountFilesystem(api *API, unmountParam params.MountFilesystemParam) error {
+	machineTag, filesystemTag, err := parseMountFilesystemTags(unmountParam.MachineTag, unmountParam.FilesystemTag)
+	if err != nil {
+		return err
+	}
+	if err := api.storage.DetachFilesystem(machineTag, filesystemTag); err != nil {
 		return err
 	}
 	return nil

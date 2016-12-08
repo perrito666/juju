@@ -157,6 +157,24 @@ func (c *Client) MountVolume(mountParams params.MountVolumeParams) error {
 	return nil
 }
 
+// UnmountFilesystem unmounts the specified volumes form the specified machines.
+func (c *Client) UnmountFilesystem(unmountParams params.MountFilesystemParams) error {
+	err := c.facade.FacadeCall("UnmountFilesystem", unmountParams, nil)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	return nil
+}
+
+// MountFilesystem mounts the specified volumes in the specified machines.
+func (c *Client) MountFilesystem(mountParams params.MountFilesystemParams) error {
+	err := c.facade.FacadeCall("MountFilesystem", mountParams, nil)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	return nil
+}
+
 // UnmountVolume unmounts the specified volumes form the specified machines.
 func (c *Client) UnmountVolume(unmountParams params.MountVolumeParams) error {
 	err := c.facade.FacadeCall("UnmountVolume", unmountParams, nil)

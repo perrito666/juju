@@ -39,6 +39,12 @@ func newAPI(
 }
 
 type storageAccess interface {
+	// AttachFilesystem is required for storage functionality.
+	AttachFilesystem(names.MachineTag, names.FilesystemTag) error
+
+	// DetachFilesystem is required for storage functionality.
+	DetachFilesystem(names.MachineTag, names.FilesystemTag) error
+
 	// AttachVolume is required for storage functionality.
 	AttachVolume(names.MachineTag, names.VolumeTag) error
 

@@ -568,9 +568,23 @@ type MountVolumeParam struct {
 	VolumeTag string `json:"volume-tag"`
 }
 
-// MountVolumeParams holds multiple MountParam.
+// MountVolumeParams holds multiple MountVolumeParam.
 type MountVolumeParams struct {
 	MountParams []MountVolumeParam `json:"mount-params"`
+}
+
+// MountFilesystemParams holds the filesystem and target for a mount operation.
+type MountFilesystemParam struct {
+	// MachineTag is the tag for the machine where the volume should be mounted.
+	MachineTag string `json:"machine-tag"`
+
+	// FilesystemTag is the tag for the filesystem to be mounted.
+	FilesystemTag string `json:"volume-tag"`
+}
+
+// MountFilesystemParams holds multiple MountVolumeParam.
+type MountFilesystemParams struct {
+	MountParams []MountFilesystemParam `json:"mount-params"`
 }
 
 // VolumeDetailsResult contains details about a volume, its attachments or

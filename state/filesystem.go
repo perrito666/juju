@@ -487,6 +487,30 @@ func isFilesystemInherentlyMachineBound(st *State, tag names.FilesystemTag) (boo
 	return true, nil
 }
 
+func (st *State) AttachFilesystem(machine names.MachineTag, filesystem names.FilesystemTag) (err error) {
+	if _, err := st.Filesystem(filesystem); err != nil {
+		return errors.Trace(err)
+	}
+	buildTxn := func(attempt int) ([]txn.Op, error) {
+
+		ops := []txn.Op{
+			{
+				C:      filesystemsC,
+				Id:     filesystem.Id(),
+				Assert: bson.M{"attachmentcount": 0, "life": Alive},
+				Update: bson.D{{"$inc", bson.D{{"attachmentcount", 1}}}},
+			},
+		}
+		attachmentTemplate := []filesystemAttachmentTemplate{{
+			tag: filesystem,
+		}}
+
+		ops = append(ops, createMachineFilesystemAttachmentsOps(machine.Id(), attachmentTemplate)...)
+		return ops, nil
+	}
+	return st.run(buildTxn)
+}
+
 // DetachFilesystem marks the filesystem attachment identified by the specified machine
 // and filesystem tags as Dying, if it is Alive.
 func (st *State) DetachFilesystem(machine names.MachineTag, filesystem names.FilesystemTag) (err error) {
