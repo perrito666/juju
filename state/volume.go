@@ -368,6 +368,27 @@ func (st *State) MachineVolumeAttachments(machine names.MachineTag) ([]VolumeAtt
 	return attachments, nil
 }
 
+// AttachVolume sets the attachment for the given <volume> to the given <machine>
+// or returns error if not possible.
+func (st *State) AttachVolume(machine names.MachineTag, volume names.VolumeTag) error {
+	attachmentTemplate := []volumeAttachmentTemplate{{
+		tag: volume,
+	}}
+	buildTxn := func(attempt int) ([]txn.Op, error) {
+		ops := []txn.Op{
+			{
+				C:      volumesC,
+				Id:     volume.Id(),
+				Assert: bson.M{"attachmentcount": 0},
+				Update: bson.D{{"$inc", bson.D{{"attachmentcount", 1}}}},
+			},
+		}
+		ops = append(ops, createMachineVolumeAttachmentsOps(machine.Id(), attachmentTemplate)...)
+		return ops, nil
+	}
+	return st.run(buildTxn)
+}
+
 // VolumeAttachments returns all of the VolumeAttachments for the specified
 // volume.
 func (st *State) VolumeAttachments(volume names.VolumeTag) ([]VolumeAttachment, error) {
