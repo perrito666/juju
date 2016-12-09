@@ -467,12 +467,15 @@ func (st *State) removeMachineFilesystemsOps(machine names.MachineTag) ([]txn.Op
 		if !canRemove {
 			return nil, errors.Errorf("machine has non-machine bound filesystem %v", filesystemTag.Id())
 		}
-		ops = append(ops, txn.Op{
-			C:      filesystemsC,
-			Id:     filesystemTag.Id(),
-			Assert: txn.DocExists,
-			Remove: true,
-		})
+		ops = append(ops,
+			txn.Op{
+				C:      filesystemsC,
+				Id:     filesystemTag.Id(),
+				Assert: txn.DocExists,
+				Remove: true,
+			},
+			removeModelFilesystemRefOp(st, filesystemTag.Id()),
+		)
 	}
 	return ops, nil
 }
@@ -497,7 +500,7 @@ func (st *State) AttachFilesystem(machine names.MachineTag, filesystem names.Fil
 			{
 				C:      filesystemsC,
 				Id:     filesystem.Id(),
-				Assert: bson.M{"attachmentcount": 0, "life": Alive},
+				Assert: bson.M{"attachmentcount": 0},
 				Update: bson.D{{"$inc", bson.D{{"attachmentcount", 1}}}},
 			},
 		}
@@ -509,6 +512,16 @@ func (st *State) AttachFilesystem(machine names.MachineTag, filesystem names.Fil
 		return ops, nil
 	}
 	return st.run(buildTxn)
+}
+
+// isFilesystemParamsInherentlyMachineBound reports whether or not the given
+// filesystem params will create a filesystem inherently bound to the lifetime
+// of a machine, and will be removed along with it, leaving no resources dangling.
+func isFilesystemParamsInherentlyMachineBound(st *State, params FilesystemParams) (bool, error) {
+	// TODO(axw) when we have support for persistent filesystems,
+	// e.g. NFS shares, then we need to check the filesystem info
+	// to decide whether or not to remove.
+	return true, nil
 }
 
 // DetachFilesystem marks the filesystem attachment identified by the specified machine
@@ -676,6 +689,7 @@ func removeFilesystemOps(st *State, filesystem Filesystem) ([]txn.Op, error) {
 			Assert: txn.DocExists,
 			Remove: true,
 		},
+		removeModelFilesystemRefOp(st, filesystem.Tag().Id()),
 		removeStatusOp(st, filesystem.globalKey()),
 	}
 	// If the filesystem is backed by a volume, the volume should
@@ -735,8 +749,16 @@ func newFilesystemId(st *State, machineId string) (string, error) {
 // directly, a volume will be created and Juju will manage a filesystem
 // on it.
 func (st *State) addFilesystemOps(params FilesystemParams, machineId string) ([]txn.Op, names.FilesystemTag, names.VolumeTag, error) {
-	if params.binding == nil {
-		params.binding = names.NewMachineTag(machineId)
+	if params.binding == nil && false {
+		machineBound, err := isFilesystemParamsInherentlyMachineBound(st, params)
+		if err != nil {
+			return nil, names.FilesystemTag{}, names.VolumeTag{}, errors.Trace(err)
+		}
+		if machineBound {
+			params.binding = names.NewMachineTag(machineId)
+		} else {
+			params.binding = st.ModelTag()
+		}
 	}
 	params, err := st.filesystemParamsWithDefaults(params)
 	if err != nil {

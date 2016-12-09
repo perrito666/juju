@@ -183,3 +183,16 @@ func (c *Client) UnmountVolume(unmountParams params.MountVolumeParams) error {
 	}
 	return nil
 }
+
+// Destroy destroys specified storage entities.
+func (c *Client) Destroy(tags []names.Tag) ([]params.ErrorResult, error) {
+	out := params.ErrorResults{}
+	entities := make([]params.Entity, len(tags))
+	for i, tag := range tags {
+		entities[i] = params.Entity{Tag: tag.String()}
+	}
+	if err := c.facade.FacadeCall("Destroy", params.Entities{Entities: entities}, &out); err != nil {
+		return nil, errors.Trace(err)
+	}
+	return out.Results, nil
+}

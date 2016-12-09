@@ -151,8 +151,6 @@ func (v *volume) validate() error {
 		}
 		switch tag.(type) {
 		case names.ModelTag:
-			// TODO(axw) support binding to model
-			return errors.NotSupportedf("binding to model")
 		case names.MachineTag:
 		case names.FilesystemTag:
 		case names.StorageTag:
@@ -464,12 +462,15 @@ func (st *State) removeMachineVolumesOps(machine names.MachineTag) ([]txn.Op, er
 		if !canRemove {
 			return nil, errors.Errorf("machine has non-machine bound volume %v", volumeTag.Id())
 		}
-		ops = append(ops, txn.Op{
-			C:      volumesC,
-			Id:     volumeTag.Id(),
-			Assert: txn.DocExists,
-			Remove: true,
-		})
+		ops = append(ops,
+			txn.Op{
+				C:      volumesC,
+				Id:     volumeTag.Id(),
+				Assert: txn.DocExists,
+				Remove: true,
+			},
+			removeModelVolumeRefOp(st, volumeTag.Id()),
+		)
 	}
 	return ops, nil
 }
@@ -485,30 +486,41 @@ func isVolumeInherentlyMachineBound(st *State, tag names.VolumeTag) (bool, error
 	volumeInfo, err := volume.Info()
 	if errors.IsNotProvisioned(err) {
 		params, _ := volume.Params()
-		_, provider, err := poolStorageProvider(st, params.Pool)
-		if err != nil {
-			return false, errors.Trace(err)
-		}
-		if provider.Scope() == storage.ScopeMachine {
-			// Any storage created by a machine must be destroyed
-			// along with the machine.
-			return true, nil
-		}
-		if provider.Dynamic() {
-			// We don't know ahead of time whether the storage
-			// will be Persistent, so we assume it will be, and
-			// rely on the environment-level storage provisioner
-			// to clean up.
-			return false, nil
-		}
-		// Volume is static, so even if it is provisioned, it will
-		// be tied to the machine.
-		return true, nil
+		return isVolumeParamsInherentlyMachineBound(st, params)
 	} else if err != nil {
 		return false, errors.Trace(err)
 	}
 	// If volume does not outlive machine it can be removed.
 	return !volumeInfo.Persistent, nil
+}
+
+// isVolumeParamsInherentlyMachineBound reports whether or not the given volume
+// params will create a volume inherently bound to the lifetime of a machine,
+// and will be removed along with it, leaving no resources dangling.
+func isVolumeParamsInherentlyMachineBound(st *State, params VolumeParams) (bool, error) {
+	_, provider, err := poolStorageProvider(st, params.Pool)
+	if err != nil {
+		return false, errors.Trace(err)
+	}
+	if provider.Scope() == storage.ScopeMachine {
+		// Any storage created by a machine must be destroyed
+		// along with the machine.
+		return true, nil
+	}
+	if provider.Dynamic() {
+		// NOTE(axw) In theory, we don't know ahead of time
+		// whether the storage will be Persistent, as the model
+		// allows for a dynamic storage provider to create non-
+		// persistent storage. None of the storage providers do
+		// this, so we assume it will be persistent for now.
+		//
+		// TODO(axw) get rid of the Persistent field from Volume
+		// and Filesystem. We only need to care whether the
+		// storage is dynamic and model-scoped.
+		return false, nil
+	}
+	// Volume is static, so it will be tied to the machine.
+	return true, nil
 }
 
 // DetachVolume marks the volume attachment identified by the specified machine
@@ -734,6 +746,7 @@ func (st *State) RemoveVolume(tag names.VolumeTag) (err error) {
 				Assert: txn.DocExists,
 				Remove: true,
 			},
+			removeModelVolumeRefOp(st, tag.Id()),
 			removeStatusOp(st, volumeGlobalKey(tag.Id())),
 		}, nil
 	}
@@ -762,7 +775,15 @@ func newVolumeName(st *State, machineId string) (string, error) {
 // machine.
 func (st *State) addVolumeOps(params VolumeParams, machineId string) ([]txn.Op, names.VolumeTag, error) {
 	if params.binding == nil {
-		params.binding = names.NewMachineTag(machineId)
+		machineBound, err := isVolumeParamsInherentlyMachineBound(st, params)
+		if err != nil {
+			return nil, names.VolumeTag{}, errors.Trace(err)
+		}
+		if machineBound {
+			params.binding = names.NewMachineTag(machineId)
+		} else {
+			params.binding = st.ModelTag()
+		}
 	}
 	params, err := st.volumeParamsWithDefaults(params)
 	if err != nil {
@@ -800,6 +821,7 @@ func (st *State) newVolumeOps(doc volumeDoc, status statusDoc) []txn.Op {
 			Assert: txn.DocMissing,
 			Insert: &doc,
 		},
+		addModelVolumeRefOp(st, doc.Name),
 	}
 }
 
