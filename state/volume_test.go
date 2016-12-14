@@ -584,15 +584,10 @@ func (s *VolumeStateSuite) TestDestroyVolumeNoAttachments(c *gc.C) {
 }
 
 func (s *VolumeStateSuite) TestAttachVolume(c *gc.C) {
-	storageInstance, err := s.State.StorageInstance(storageAttachments[0].StorageInstance())
+	volume, machine := s.setupVolumeAttachment(c)
+	err := s.State.DestroyVolume(volume.VolumeTag())
 	c.Assert(err, jc.ErrorIsNil)
-
-	volume := s.storageInstanceVolume(c, storageInstance.StorageTag())
-
-	machine, err := s.State.AddOneMachine(state.MachineTemplate{
-		Series: "quantal",
-		Jobs:   []state.MachineJob{state.JobHostUnits},
-	})
+	err = s.State.DetachVolume(machine.MachineTag(), volume.VolumeTag())
 	c.Assert(err, jc.ErrorIsNil)
 	err = s.State.AttachVolume(machine.MachineTag(), volume)
 	c.Assert(err, jc.ErrorIsNil)

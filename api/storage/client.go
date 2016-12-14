@@ -149,7 +149,7 @@ func (c *Client) AddToUnit(storages []params.StorageAddParams) ([]params.ErrorRe
 }
 
 // MountVolume mounts the specified volumes in the specified machines.
-func (c *Client) MountVolume(mountParams params.MountParams) error {
+func (c *Client) MountVolume(mountParams params.MountVolumeParams) error {
 	err := c.facade.FacadeCall("MountVolume", mountParams, nil)
 	if err != nil {
 		return errors.Trace(err)
@@ -158,7 +158,7 @@ func (c *Client) MountVolume(mountParams params.MountParams) error {
 }
 
 // UnmountVolume unmounts the specified volumes form the specified machines.
-func (c *Client) UnmountVolume(unmountParams params.MountParams) error {
+func (c *Client) UnmountVolume(unmountParams params.MountVolumeParams) error {
 	err := c.facade.FacadeCall("UnmountVolume", unmountParams, nil)
 	if err != nil {
 		return errors.Trace(err)

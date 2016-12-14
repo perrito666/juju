@@ -77,19 +77,19 @@ func (c *mountVolumeCommand) Run(ctx *cmd.Context) (err error) {
 	}
 	defer api.Close()
 
-	mountParams := params.MountParam{
+	mountParams := params.MountVolumeParam{
 		MachineTag: c.machineTag.String(),
 		VolumeTag:  c.volumeTag.String(),
 	}
-	err = api.MountVolume(params.MountParams{
-		MountParams: []params.MountParam{mountParams},
+	err = api.MountVolume(params.MountVolumeParams{
+		MountParams: []params.MountVolumeParam{mountParams},
 	})
 	return err
 }
 
 // MountAPI represents an API connection that allows mounting.
 type MountAPI interface {
-	MountVolume(params.MountParams) error
+	MountVolume(params.MountVolumeParams) error
 	Close() error
 }
 
@@ -115,18 +115,18 @@ func (c *unmountVolumeCommand) Run(ctx *cmd.Context) (err error) {
 	}
 	defer api.Close()
 
-	unmountParams := params.MountParam{
+	unmountParams := params.MountVolumeParam{
 		MachineTag: c.machineTag.String(),
 		VolumeTag:  c.volumeTag.String(),
 	}
-	err = api.UnmountVolume(params.MountParams{
-		MountParams: []params.MountParam{unmountParams},
+	err = api.UnmountVolume(params.MountVolumeParams{
+		MountParams: []params.MountVolumeParam{unmountParams},
 	})
 	return err
 }
 
 // UnmountAPI represents an API connection that allows unmounting.
 type UnmountAPI interface {
-	UnmountVolume(params.MountParams) error
+	UnmountVolume(params.MountVolumeParams) error
 	Close() error
 }

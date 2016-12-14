@@ -559,8 +559,8 @@ type VolumeDetails struct {
 	Storage *StorageDetails `json:"storage,omitempty"`
 }
 
-// MountParams holds the volume and target for a mount operation.
-type MountParam struct {
+// MountVolumeParams holds the volume and target for a mount operation.
+type MountVolumeParam struct {
 	// MachineTag is the tag for the machine where the volume should be mounted.
 	MachineTag string `json:"machine-tag"`
 
@@ -568,9 +568,9 @@ type MountParam struct {
 	VolumeTag string `json:"volume-tag"`
 }
 
-// MountParams holds multiple MountParam.
-type MountParams struct {
-	MountParams []MountParam `json:"mount-params"`
+// MountVolumeParams holds multiple MountParam.
+type MountVolumeParams struct {
+	MountParams []MountVolumeParam `json:"mount-params"`
 }
 
 // VolumeDetailsResult contains details about a volume, its attachments or

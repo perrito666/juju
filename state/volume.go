@@ -371,6 +371,14 @@ func (st *State) MachineVolumeAttachments(machine names.MachineTag) ([]VolumeAtt
 // AttachVolume sets the attachment for the given <volume> to the given <machine>
 // or returns error if not possible.
 func (st *State) AttachVolume(machine names.MachineTag, volume names.VolumeTag) error {
+	va, err := st.volumeAttachments(bson.D{
+		{"volumeid", volume.Id()},
+		{"life", Alive},
+	})
+	if err == nil {
+		return errors.Errorf("%q is alreaddy attached to machine", volume.Id(), va[0].Machine())
+	}
+
 	attachmentTemplate := []volumeAttachmentTemplate{{
 		tag: volume,
 	}}
@@ -379,7 +387,7 @@ func (st *State) AttachVolume(machine names.MachineTag, volume names.VolumeTag) 
 			{
 				C:      volumesC,
 				Id:     volume.Id(),
-				Assert: bson.M{"attachmentcount": 0},
+				Assert: bson.M{"attachmentcount": 0, "life": Alive},
 				Update: bson.D{{"$inc", bson.D{{"attachmentcount", 1}}}},
 			},
 		}
