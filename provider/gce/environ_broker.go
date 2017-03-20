@@ -11,6 +11,7 @@ import (
 	jujuos "github.com/juju/utils/os"
 	"github.com/juju/utils/series"
 
+	"github.com/juju/juju/cloudconfig/cloudinit"
 	"github.com/juju/juju/cloudconfig/instancecfg"
 	"github.com/juju/juju/cloudconfig/providerinit"
 	"github.com/juju/juju/constraints"
@@ -140,7 +141,7 @@ func (env *environ) newRawInstance(args environs.StartInstanceParams, spec *inst
 		return nil, errors.Trace(err)
 	}
 
-	metadata, err := getMetadata(args, os)
+	metadata, err := getMetadata(args, os, args.InstanceConfig.Series)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -181,7 +182,12 @@ func (env *environ) newRawInstance(args environs.StartInstanceParams, spec *inst
 
 // getMetadata builds the raw "user-defined" metadata for the new
 // instance (relative to the provided args) and returns it.
-func getMetadata(args environs.StartInstanceParams, os jujuos.OSType) (map[string]string, error) {
+func getMetadata(args environs.StartInstanceParams, os jujuos.OSType, series string) (map[string]string, error) {
+	cloudConfig, err := cloudinit.New(series)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	cloudConfig.SetHostname(args.Hostname)
 	userData, err := providerinit.ComposeUserData(args.InstanceConfig, nil, GCERenderer{})
 	if err != nil {
 		return nil, errors.Annotate(err, "cannot make user data")

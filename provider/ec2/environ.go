@@ -21,6 +21,7 @@ import (
 	"gopkg.in/amz.v3/ec2"
 	"gopkg.in/juju/names.v2"
 
+	"github.com/juju/juju/cloudconfig/cloudinit"
 	"github.com/juju/juju/cloudconfig/instancecfg"
 	"github.com/juju/juju/cloudconfig/providerinit"
 	"github.com/juju/juju/constraints"
@@ -485,6 +486,11 @@ func (e *environ) StartInstance(args environs.StartInstanceParams) (_ *environs.
 	}
 
 	callback(status.Allocating, "Making user data", nil)
+	cloudConfig, err := cloudinit.New(args.InstanceConfig.Series)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	cloudConfig.SetHostname(args.Hostname)
 	userData, err := providerinit.ComposeUserData(args.InstanceConfig, nil, AmazonRenderer{})
 	if err != nil {
 		return nil, errors.Annotate(err, "cannot make user data")

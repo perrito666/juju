@@ -53,6 +53,7 @@ type CloudConfig interface {
 	WrittenFilesConfig
 	RenderConfig
 	AdvancedPackagingConfig
+	HostnameConfig
 }
 
 // SystemUpdateConfig is the interface for managing all system update options.
@@ -353,6 +354,11 @@ type AdvancedPackagingConfig interface {
 	// AddCloudArchiveCloudTools configures the cloudconfig to set up the cloud
 	// archive if it is required (eg: LTS'es).
 	AddCloudArchiveCloudTools()
+}
+
+type HostnameConfig interface {
+	SetHostname(hostname string)
+	Hostname() string
 }
 
 type User struct {

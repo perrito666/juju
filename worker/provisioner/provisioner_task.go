@@ -555,6 +555,7 @@ func constructStartInstanceParams(
 	instanceConfig *instancecfg.InstanceConfig,
 	provisioningInfo *params.ProvisioningInfo,
 	possibleTools coretools.List,
+	hostname string,
 ) (environs.StartInstanceParams, error) {
 
 	volumes := make([]storage.VolumeParams, len(provisioningInfo.Volumes))
@@ -634,6 +635,7 @@ func constructStartInstanceParams(
 		EndpointBindings:  endpointBindings,
 		ImageMetadata:     possibleImageMetadata,
 		StatusCallback:    machine.SetInstanceStatus,
+		Hostname:          hostname,
 	}, nil
 }
 
@@ -684,13 +686,18 @@ func (task *provisionerTask) startMachines(machines []*apiprovisioner.Machine) e
 		if err != nil {
 			return task.setErrorStatus("cannot find tools for machine %q: %v", m, err)
 		}
+		hostname, err := m.Hostname()
+		if err != nil {
+			return task.setErrorStatus("cannot find hostname for machine %q: %v", m, err)
 
+		}
 		startInstanceParams, err := constructStartInstanceParams(
 			task.controllerUUID,
 			m,
 			instanceCfg,
 			pInfo,
 			possibleTools,
+			hostname,
 		)
 		if err != nil {
 			return task.setErrorStatus("cannot construct params for machine %q: %v", m, err)
@@ -723,6 +730,7 @@ func (task *provisionerTask) startMachine(
 		logger.Errorf("%v", err)
 	}
 	for attemptsLeft := task.retryStartInstanceStrategy.retryCount; attemptsLeft >= 0; attemptsLeft-- {
+		logger.Warningf("HOSTNAME IS %q", startInstanceParams.Hostname)
 		attemptResult, err := task.broker.StartInstance(startInstanceParams)
 		if err == nil {
 			result = attemptResult

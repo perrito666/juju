@@ -86,6 +86,7 @@ func (env *environ) newRawInstance(args environs.StartInstanceParams, img *OvaFi
 	}
 	cloudcfg.AddPackage("open-vm-tools")
 	cloudcfg.AddPackage("iptables-persistent")
+	cloudcfg.SetHostname(args.Hostname)
 	userData, err := providerinit.ComposeUserData(args.InstanceConfig, cloudcfg, VsphereRenderer{})
 	if err != nil {
 		return nil, nil, errors.Annotate(err, "cannot make user data")

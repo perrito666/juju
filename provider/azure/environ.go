@@ -28,6 +28,7 @@ import (
 	"github.com/juju/version"
 	"gopkg.in/juju/names.v2"
 
+	"github.com/juju/juju/cloudconfig/cloudinit"
 	"github.com/juju/juju/cloudconfig/instancecfg"
 	"github.com/juju/juju/cloudconfig/providerinit"
 	"github.com/juju/juju/constraints"
@@ -517,11 +518,16 @@ func (env *azureEnviron) StartInstance(args environs.StartInstanceParams) (*envi
 	// the Juju machine name. We tag all resources related to the
 	// machine with this.
 	vmTags[jujuMachineNameTag] = vmName
-
+	cloudConfig, err := cloudinit.New(args.InstanceConfig.Series)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	cloudConfig.SetHostname(args.Hostname)
 	if err := env.createVirtualMachine(
 		vmName, vmTags, envTags,
 		instanceSpec, args.InstanceConfig,
 		storageAccountType,
+		cloudConfig,
 	); err != nil {
 		logger.Errorf("creating instance failed, destroying: %v", err)
 		if err := env.StopInstances(instance.Id(vmName)); err != nil {
@@ -557,6 +563,7 @@ func (env *azureEnviron) createVirtualMachine(
 	instanceSpec *instances.InstanceSpec,
 	instanceConfig *instancecfg.InstanceConfig,
 	storageAccountType string,
+	cloudConfig cloudinit.CloudConfig,
 ) error {
 
 	deploymentsClient := resources.DeploymentsClient{env.resources}
@@ -606,6 +613,7 @@ func (env *azureEnviron) createVirtualMachine(
 		vmName, instanceConfig,
 		env.provider.config.RandomWindowsAdminPassword,
 		env.provider.config.GenerateSSHKey,
+		cloudConfig,
 	)
 	if err != nil {
 		return errors.Annotate(err, "creating OS profile")
@@ -940,10 +948,11 @@ func newOSProfile(
 	instanceConfig *instancecfg.InstanceConfig,
 	randomAdminPassword func() string,
 	generateSSHKey func(string) (string, string, error),
+	cloudConfig cloudinit.CloudConfig,
 ) (*compute.OSProfile, os.OSType, error) {
 	logger.Debugf("creating OS profile for %q", vmName)
 
-	customData, err := providerinit.ComposeUserData(instanceConfig, nil, AzureRenderer{})
+	customData, err := providerinit.ComposeUserData(instanceConfig, cloudConfig, AzureRenderer{})
 	if err != nil {
 		return nil, os.Unknown, errors.Annotate(err, "composing user data")
 	}

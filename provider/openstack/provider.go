@@ -992,6 +992,7 @@ func (e *Environ) StartInstance(args environs.StartInstanceParams) (*environs.St
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
+	cloudcfg.SetHostname(args.Hostname)
 	userData, err := providerinit.ComposeUserData(args.InstanceConfig, cloudcfg, OpenstackRenderer{})
 	if err != nil {
 		return nil, errors.Annotate(err, "cannot make user data")

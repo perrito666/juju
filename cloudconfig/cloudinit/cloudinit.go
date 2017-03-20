@@ -142,6 +142,22 @@ func (cfg *cloudConfig) UnsetUsers() {
 	cfg.UnsetAttr("users")
 }
 
+func (cfg *cloudConfig) SetHostname(hostname string) {
+	cfg.SetAttr("hostname", hostname)
+}
+
+func (cfg *cloudConfig) Hostname() string {
+	hostname, ok := cfg.attrs["hostname"]
+	if !ok {
+		return ""
+	}
+	hostnameString, ok := hostname.(string)
+	if !ok {
+		return ""
+	}
+	return hostnameString
+}
+
 // SetSystemUpdate is defined on the SystemUpdateConfig interface.
 func (cfg *cloudConfig) SetSystemUpdate(yes bool) {
 	cfg.SetAttr("package_update", yes)

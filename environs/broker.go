@@ -81,6 +81,9 @@ type StartInstanceParams struct {
 	// changes in status. Its signature is consistent with other
 	// status-related functions to allow them to be used as callbacks.
 	StatusCallback StatusCallbackFunc
+
+	// Hostname is the hostname the instance should have.
+	Hostname string
 }
 
 // StartInstanceResult holds the result of an

@@ -4,12 +4,15 @@
 package provisioner
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/juju/errors"
 	"github.com/juju/loggo"
 	"github.com/juju/utils/set"
 	"gopkg.in/juju/names.v2"
+
+	"strings"
 
 	"github.com/juju/juju/apiserver/common"
 	"github.com/juju/juju/apiserver/common/networkingcommon"
@@ -1103,4 +1106,24 @@ func (p *ProvisionerAPI) getOneMachineProviderNetworkConfig(m *state.Machine) ([
 
 func (p *ProvisionerAPI) SetHostMachineNetworkConfig(args params.SetMachineNetworkConfig) error {
 	return p.SetObservedNetworkConfig(args)
+}
+
+// Hostname returns the hostname for the passed entities.
+func (p *ProvisionerAPI) Hostname(args params.Entities) (params.StringResults, error) {
+	result := params.StringResults{
+		Results: make([]params.StringResult, len(args.Entities)),
+	}
+	for i, entity := range args.Entities {
+		tag, err := names.ParseMachineTag(entity.Tag)
+		if err != nil {
+			result.Results[i].Error = common.ServerError(common.ErrPerm)
+			continue
+		}
+
+		modelUUID := p.st.ModelUUID()
+		hostname := fmt.Sprintf("%s%s", modelUUID[len(modelUUID)-19:], tag.Id())
+		hostname = strings.Replace(hostname, "-", "", -1)
+		result.Results[i].Result = hostname
+	}
+	return result, nil
 }

@@ -1005,6 +1005,7 @@ func (environ *maasEnviron) StartInstance(args environs.StartInstanceParams) (
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
+	cloudcfg.SetHostname(args.Hostname)
 
 	userdata, err := providerinit.ComposeUserData(args.InstanceConfig, cloudcfg, MAASRenderer{})
 	if err != nil {

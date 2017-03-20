@@ -129,9 +129,13 @@ func (env *environ) newRawInstance(
 	args environs.StartInstanceParams,
 	arch string,
 ) (*lxdclient.Instance, error) {
-	hostname, err := env.namespace.Hostname(args.InstanceConfig.MachineId)
+	hostname := args.Hostname
+	instanceName, err := env.namespace.Hostname(args.InstanceConfig.MachineId)
 	if err != nil {
 		return nil, errors.Trace(err)
+	}
+	if hostname == "" {
+		hostname = instanceName
 	}
 
 	// Note: other providers have the ImageMetadata already read for them
@@ -180,6 +184,7 @@ func (env *environ) newRawInstance(
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
+	cloudcfg.SetHostname(hostname)
 
 	metadata, err := getMetadata(cloudcfg, args)
 	if err != nil {
@@ -191,7 +196,7 @@ func (env *environ) newRawInstance(
 	// TODO(ericsnow) Support multiple networks?
 	// TODO(ericsnow) Use a different net interface name? Configurable?
 	instSpec := lxdclient.InstanceSpec{
-		Name:  hostname,
+		Name:  instanceName,
 		Image: image,
 		//Type:              spec.InstanceType.Name,
 		//Disks:             getDisks(spec, args.Constraints),

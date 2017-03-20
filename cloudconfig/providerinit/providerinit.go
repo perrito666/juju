@@ -55,6 +55,7 @@ func ComposeUserData(icfg *instancecfg.InstanceConfig, cloudcfg cloudinit.CloudC
 			return nil, errors.Trace(err)
 		}
 	}
+
 	_, err := configureCloudinit(icfg, cloudcfg)
 	if err != nil {
 		return nil, errors.Trace(err)
